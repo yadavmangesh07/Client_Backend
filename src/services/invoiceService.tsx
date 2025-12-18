@@ -2,47 +2,78 @@ import apiClient from "@/lib/axios";
 import type { Invoice, PageResponse } from "@/types";
 
 export const invoiceService = {
-  // 1. Get all invoices
-  getAll: async () => {
-    const response = await apiClient.get<Invoice[]>("/invoices");
-    return response as unknown as Invoice[];
-  },
-
-  // 2. Search with pagination
+  // ✅ FIX: Added 'size' and 'number' to satisfy the PageResponse type
   search: async (params: any) => {
-    const response = await apiClient.get<PageResponse<Invoice>>("/invoices/search", { params });
-    return response as unknown as PageResponse<Invoice>;
+    try {
+      const response = await apiClient.get<any>("/invoices/search", { params });
+      
+      // Case 1: Backend returns a standard Spring Boot Page ({ content: [...] })
+      if (response.data && Array.isArray(response.data.content)) {
+        return response.data as PageResponse<Invoice>;
+      }
+      
+      // Case 2: Backend returns a raw List ([...]) -> Wrap it manually
+      if (Array.isArray(response.data)) {
+        return {
+          content: response.data,
+          totalElements: response.data.length,
+          totalPages: 1,
+          last: true,
+          first: true,
+          size: response.data.length, // 👈 Added
+          number: 0                   // 👈 Added
+        } as PageResponse<Invoice>;
+      }
+
+      // Case 3: Empty or error -> Return valid empty Page
+      return { 
+        content: [], 
+        totalElements: 0, 
+        totalPages: 0, 
+        last: true, 
+        first: true, 
+        size: params.size || 20, // 👈 Added
+        number: 0                // 👈 Added
+      } as PageResponse<Invoice>;
+
+    } catch (error) {
+      console.error("Failed to load invoices", error);
+      // Return safe empty object on crash
+      return { 
+        content: [], 
+        totalElements: 0, 
+        totalPages: 0, 
+        last: true, 
+        first: true, 
+        size: 20, 
+        number: 0 
+      } as PageResponse<Invoice>;
+    }
   },
 
-  // 3. Get single invoice
   getById: async (id: string) => {
     const response = await apiClient.get<Invoice>(`/invoices/${id}`);
-    return response as unknown as Invoice;
+    return response.data;
   },
 
-  // 4. Create new invoice
-  create: async (data: any) => {
+  create: async (data: Partial<Invoice>) => {
     const response = await apiClient.post<Invoice>("/invoices", data);
-    return response as unknown as Invoice;
+    return response.data;
   },
 
-  // 5. Update existing invoice
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Partial<Invoice>) => {
     const response = await apiClient.put<Invoice>(`/invoices/${id}`, data);
-    return response as unknown as Invoice;
+    return response.data;
   },
 
-  // 6. Delete invoice
   delete: async (id: string) => {
     await apiClient.delete(`/invoices/${id}`);
   },
 
-  // 7. Download PDF
   downloadPdf: async (id: string) => {
-    const response = await apiClient.get<Blob>(`/invoices/${id}/pdf`, {
+    const response = await apiClient.get(`/invoices/${id}/pdf`, {
       responseType: "blob",
     });
-    // Cast to Blob because our interceptor returns the raw data (the blob itself)
-    return response as unknown as Blob;
-  },
+    return response.data;
+  }
 };

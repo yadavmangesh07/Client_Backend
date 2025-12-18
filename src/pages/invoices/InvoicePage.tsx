@@ -220,7 +220,7 @@ export default function InvoicePage() {
           <TableHeader>
             <TableRow>
               <TableHead>Invoice #</TableHead>
-              <TableHead>Client</TableHead> {/* Added Client Name Column */}
+              <TableHead>Client</TableHead> 
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>

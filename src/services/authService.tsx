@@ -1,45 +1,57 @@
 import apiClient from "@/lib/axios";
-
-// 1. Types
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  token: string;
+import type { LoginRequest, AuthResponse } from "@/types";
+export interface User {
+  id: string;
   username: string;
   role: string;
 }
-
 export const authService = {
-  // 2. Login Function
   login: async (creds: LoginRequest) => {
-    const response = await apiClient.post<AuthResponse>("/auth/login", creds);
-    const data = response as unknown as AuthResponse;
+    console.log("Attempting login with:", creds.username); // Debug log
     
-    // 3. Save Token to Browser Storage
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify({ username: data.username, role: data.role }));
+    // 1. Make the request
+    // We type it as 'any' temporarily to handle different Axios configurations safely
+    const response: any = await apiClient.post("/auth/login", creds);
+    
+    console.log("Server Response:", response); // Check your console to see this!
+
+    // 2. Handle different response structures
+    // Case A: Standard Axios (response.data.token)
+    // Case B: Interceptor Extracted (response.token)
+    const token = response.data?.token || response.token;
+
+    if (token) {
+      localStorage.setItem("token", token);
+      return { token };
+    } else {
+      console.error("Token missing in response:", response);
+      throw new Error("Login failed: No token received");
     }
-    return data;
+  },
+  getAllUsers: async () => {
+    const response = await apiClient.get<User[]>("/auth/users");
+    return response.data;
   },
 
-  // 4. Logout Function
+  deleteUser: async (id: string) => {
+    await apiClient.delete(`/auth/users/${id}`);
+  },
+
   logout: () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login"; // Force redirect
+    window.location.href = "/login";
   },
 
-  // 5. Check if user is logged in
   isAuthenticated: () => {
     return !!localStorage.getItem("token");
   },
-  
-  // 6. Get current token
+
   getToken: () => {
     return localStorage.getItem("token");
+  },
+
+  register: async (username: string, password: string, role: string = "USER") => {
+    return await apiClient.post("/auth/register", { username, password, role });
   }
+  
 };

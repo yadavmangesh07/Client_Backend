@@ -1,38 +1,36 @@
 import axios from "axios";
 
+// 1. Create the Axios instance
 const apiClient = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "http://localhost:8080/api", // Make sure this matches your Backend port
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// 1. Request Interceptor: Attaches the Token
+// 2. Add Request Interceptor (The Magic Part)
 apiClient.interceptors.request.use(
   (config) => {
+    // Get token from local storage
     const token = localStorage.getItem("token");
+    
+    // If token exists, attach it to the header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
-// 2. Response Interceptor: Handles Data & Errors
+// 3. Add Response Interceptor (Optional: Handle Token Expiry)
 apiClient.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
+  (response) => response,
   (error) => {
-    // If backend says "403 Forbidden" or "401 Unauthorized", it means token is bad/expired
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Only redirect if we are not already on the login page (prevents infinite loops)
-      if (window.location.pathname !== "/login") {
-         // Optional: Clear storage and redirect to login
-         // localStorage.removeItem("token"); 
-         // window.location.href = "/login"; 
-      }
+    if (error.response && error.response.status === 403) {
+      console.error("Access Forbidden. You might not have the right permissions.");
     }
     return Promise.reject(error);
   }

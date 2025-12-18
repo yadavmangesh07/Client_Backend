@@ -10,6 +10,7 @@ import LoginPage from "./pages/auth/LoginPage";
 
 // Auth Guard
 import { ProtectedRoute } from "./pages/auth/ProtectedRoute";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientPage />} />
             <Route path="/invoices" element={<InvoicePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
 

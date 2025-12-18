@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { Users, FileText, LayoutDashboard, LogOut } from "lucide-react"; // 👈 Import LogOut
+import { Users, FileText, LayoutDashboard, LogOut, Settings } from "lucide-react"; // 👈 Import LogOut
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService"; // 👈 Import AuthService
 
@@ -10,6 +10,7 @@ export function MainLayout() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
+    { label: "Settings", href: "/settings", icon: Settings },
   ];
 
   const handleLogout = () => {

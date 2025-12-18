@@ -1,21 +1,21 @@
 import apiClient from "@/lib/axios";
 import type { Invoice } from "@/types";
-export interface MonthlyStat {
-  month: string;
-  amount: number;
-}
+
 export interface DashboardStats {
   totalRevenue: number;
-  pendingAmount: number;     // 👈 This was missing
+  pendingAmount: number;
   totalInvoices: number;
   totalClients: number;
-  recentInvoices: Invoice[]; // 👈 This was missing
-  monthlyStats: MonthlyStat[]; // 👈 This was missing
+  recentInvoices: Invoice[];
+  monthlyStats: any[];
 }
 
 export const dashboardService = {
   getStats: async () => {
-    const response = await apiClient.get<DashboardStats>("/dashboard/stats");
-    return response as unknown as DashboardStats;
+    // 1. Call the endpoint
+    const response = await apiClient.get<DashboardStats>("/dashboard");
+    
+    // 2. Return data directly (Axios interceptor usually handles .data, but just in case)
+    return response.data; 
   },
 };

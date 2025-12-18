@@ -68,3 +68,14 @@ export interface PageResponse<T> {
   size: number;
   number: number;
 }
+
+// Add these to src/types/index.ts
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+}
