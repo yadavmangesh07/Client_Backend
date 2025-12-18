@@ -25,7 +25,7 @@ export function MainLayout() {
         <div className="flex h-14 items-center border-b px-6">
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <LayoutDashboard className="h-6 w-6" />
-            <span>Billing App</span>
+            <span>JMD Decor</span>
           </Link>
         </div>
         

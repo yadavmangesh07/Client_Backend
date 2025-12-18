@@ -5,8 +5,12 @@ export interface Client {
   name: string;
   email?: string;
   phone?: string;
-  address?: string;
+  address?: string; // Billing Address
+  shippingAddress?: string; // Optional: If you want to store distinct shipping on client
   notes?: string;
+  gstin?: string;
+  state?: string;
+  stateCode?: string;
 }
 
 export interface InvoiceItem {
@@ -14,6 +18,9 @@ export interface InvoiceItem {
   qty: number;
   rate: number;
   amount: number;
+  hsnCode?: string;
+  uom?: string; // NOS, KGS, etc.
+  taxRate?: number; // e.g. 18
 }
 
 export interface Attachment {
@@ -29,11 +36,24 @@ export interface Invoice {
   id: string;
   invoiceNo: string;
   clientId: string;
+  
+  // 👇 NEW: Address Snapshot (Stored on Invoice)
+  billingAddress?: string;
+  shippingAddress?: string;
+
+  // 👇 NEW: Transport & Order Details
+  transportMode?: string;
+  ewayBillNo?: string;
+  challanNo?: string;
+  challanDate?: string; // ISO String
+  poNumber?: string;
+  poDate?: string;      // ISO String
+
   items: InvoiceItem[];
   subtotal: number;
   tax: number;
   total: number;
-  status: 'DRAFT' | 'PAID' | 'UNPAID' | 'PARTIAL';
+  status: 'DRAFT' | 'PAID' | 'UNPAID' | 'PARTIAL' | 'PENDING';
   issuedAt: string;
   dueDate?: string;
   attachments?: Attachment[];
@@ -41,7 +61,6 @@ export interface Invoice {
   updatedAt?: string;
 }
 
-// 👇 THIS IS THE PART YOU LIKELY MISSED
 export interface PageResponse<T> {
   content: T[];
   totalPages: number;

@@ -1,161 +1,190 @@
 import { useEffect, useState } from "react";
-import { Users, FileText, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
+  XAxis 
+} from "recharts";
+import { 
+  DollarSign, 
+  Users, 
+  FileText, 
+  Activity 
+} from "lucide-react";
 import { format } from "date-fns";
-import { Link } from "react-router-dom";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent 
+} from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart"; 
+
 import { dashboardService, type DashboardStats } from "@/services/dashboardService";
-import { invoiceService } from "@/services/invoiceService";
-import type { Invoice } from "@/types";
+import type { Invoice } from "@/types"; 
+
+// Define Chart Config
+const chartConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
 
 export default function DashboardPage() {
-  // Initialize with safe defaults
-  const [stats, setStats] = useState<DashboardStats>({
-    totalClients: 0,
-    totalInvoices: 0,
-    totalRevenue: 0,
-  });
-  
-  const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadStats = async () => {
       try {
-        // 1. Fetch Stats
-        const statsData = await dashboardService.getStats();
-        
-        // Only update if we actually got a valid object back
-        if (statsData) {
-            setStats(statsData);
-        }
-
-        // 2. Fetch Recent Invoices (Page 0, Size 5)
-        const invoicesData = await invoiceService.search({ page: 0, size: 5 });
-        // @ts-ignore
-        setRecentInvoices(invoicesData.content || []);
+        const data = await dashboardService.getStats();
+        setStats(data);
       } catch (error) {
-        console.error("Dashboard load error:", error);
-        // We don't show an error toast here to avoid spamming if the backend is just waking up
+        console.error(error);
+        toast.error("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
-
-    loadData();
+    loadStats();
   }, []);
 
-  // Helper to safely format currency
-  const formatCurrency = (amount: any) => {
-    // Force conversion to number, defaulting to 0 if null/undefined
-    const value = Number(amount) || 0;
-    return `$${value.toFixed(2)}`;
-  };
+  if (loading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading Dashboard...</div>;
+  }
+
+  // If stats is null or API failed completely
+  if (!stats) return <div className="p-8 text-center">No data available.</div>;
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Overview of your billing status.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Overview of your business performance.</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* --- STATS CARDS --- */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            {/* 👇 CRASH FIX: Uses helper function */}
-            <div className="text-2xl font-bold">
-                {formatCurrency(stats?.totalRevenue)}
-            </div>
-            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+            {/* 👇 FIX: Use (value || 0) to prevent crash */}
+            <div className="text-2xl font-bold">${(stats.totalRevenue || 0).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Lifetime collected</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
+            <Activity className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{Number(stats?.totalClients) || 0}</div>
-            <p className="text-xs text-muted-foreground">Active clients</p>
+            {/* 👇 FIX: Use (value || 0) to prevent crash */}
+            <div className="text-2xl font-bold">${(stats.pendingAmount || 0).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Unpaid invoices</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{Number(stats?.totalInvoices) || 0}</div>
-            <p className="text-xs text-muted-foreground">Total invoices generated</p>
+            <div className="text-2xl font-bold">{stats.totalClients || 0}</div>
+            <p className="text-xs text-muted-foreground">Active customers</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <FileText className="h-4 w-4 text-gray-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalInvoices || 0}</div>
+            <p className="text-xs text-muted-foreground">All time generated</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Invoices Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold">Recent Invoices</h3>
-            <Button asChild variant="outline" size="sm">
-                <Link to="/invoices">View All</Link>
-            </Button>
-        </div>
+      {/* --- CHART & RECENT ACTIVITY --- */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         
-        <div className="border rounded-md bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                 <TableRow><TableCell colSpan={5} className="text-center h-24">Loading...</TableCell></TableRow>
-              ) : !recentInvoices || recentInvoices.length === 0 ? (
-                 <TableRow><TableCell colSpan={5} className="text-center h-24">No recent activity.</TableCell></TableRow>
+        {/* SHADCN CHART SECTION */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Revenue Overview</CardTitle>
+            <CardDescription>Monthly revenue for the last 6 months</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+              {/* 👇 FIX: Ensure data is an array */}
+              <BarChart accessibilityLayer data={stats.monthlyStats || []}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value ? value.slice(0, 3) : ''}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar 
+                    dataKey="amount" 
+                    fill="var(--color-revenue)" 
+                    radius={[4, 4, 0, 0]} 
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* RECENT INVOICES */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Invoices</CardTitle>
+            <CardDescription>Latest 5 transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* 👇 FIX: Ensure array exists and has length */}
+              {(!stats.recentInvoices || stats.recentInvoices.length === 0) ? (
+                <p className="text-sm text-muted-foreground">No recent activity.</p>
               ) : (
-                recentInvoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
-                    <TableCell>
-                        {/* Safe check for client name vs ID */}
-                        {inv.clientId || "Unknown"} 
-                    </TableCell>
-                    <TableCell>{inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM dd') : '-'}</TableCell>
-                    <TableCell>
-                        <Badge variant={inv.status === 'PAID' ? 'default' : 'secondary'}>{inv.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-bold">
-                        {formatCurrency(inv.total)}
-                    </TableCell>
-                  </TableRow>
+                stats.recentInvoices.map((inv: Invoice) => (
+                  <div key={inv.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        #{inv.invoiceNo}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {inv.issuedAt ? format(new Date(inv.issuedAt), "MMM dd, yyyy") : "No Date"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant={inv.status === 'PAID' ? 'default' : 'secondary'} className="text-xs">
+                            {inv.status}
+                        </Badge>
+                        <div className="font-bold text-sm">
+                            ${(inv.total || 0).toFixed(2)}
+                        </div>
+                    </div>
+                  </div>
                 ))
               )}
-            </TableBody>
-          </Table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
