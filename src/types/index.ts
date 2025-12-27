@@ -11,6 +11,9 @@ export interface Client {
   gstin?: string;
   state?: string;
   stateCode?: string;
+  pincode?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InvoiceItem {
@@ -21,6 +24,7 @@ export interface InvoiceItem {
   hsnCode?: string;
   uom?: string; // NOS, KGS, etc.
   taxRate?: number; // e.g. 18
+  
 }
 
 export interface Attachment {
@@ -36,6 +40,7 @@ export interface Invoice {
   id: string;
   invoiceNo: string;
   clientId: string;
+  
   
   // 👇 NEW: Address Snapshot (Stored on Invoice)
   billingAddress?: string;
@@ -78,4 +83,29 @@ export interface LoginRequest {
 
 export interface AuthResponse {
   token: string;
+}
+
+export interface Company {
+  id?: string;
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  website?: string;
+  pincode?: string;
+  
+  // Tax
+  gstin: string;
+  udyamRegNo?: string;
+
+  // Bank
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branch: string;
+
+  // Branding
+  logoUrl?: string;
+  signatureUrl?: string;
 }

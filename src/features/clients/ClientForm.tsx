@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { Mail, Phone, MapPin, User, Building2, Map } from "lucide-react";
+import { Mail, Phone, MapPin, User, Building2, Map, Hash } from "lucide-react"; // Added Hash for Pincode
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 import { clientService } from "@/services/clientService";
 import type { Client } from "@/types";
@@ -58,12 +59,16 @@ const INDIAN_STATES = [
 const clientSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  gstin: z.string().optional(),
-  state: z.string().optional(),
-  stateCode: z.string().optional(),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  gstin: z.string().optional().or(z.literal("")),
+  // 👇 Kept Pincode for E-Way Bill support
+  pincode: z.string().min(6, "Must be 6 digits").optional().or(z.literal("")), 
+  state: z.string().optional().or(z.literal("")),
+  stateCode: z.string().optional().or(z.literal("")),
 });
+
+type ClientFormValues = z.infer<typeof clientSchema>;
 
 interface ClientFormProps {
   open: boolean;
@@ -73,11 +78,11 @@ interface ClientFormProps {
 }
 
 export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: ClientFormProps) {
-  const form = useForm({
+  const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "", email: "", phone: "", address: "",
-      gstin: "", state: "", stateCode: "",
+      gstin: "", pincode: "", state: "", stateCode: "",
     },
   });
 
@@ -89,11 +94,12 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
         phone: clientToEdit.phone || "",
         address: clientToEdit.address || "",
         gstin: clientToEdit.gstin || "",
+        pincode: clientToEdit.pincode || "",
         state: clientToEdit.state || "",
         stateCode: clientToEdit.stateCode || "",
       } : {
         name: "", email: "", phone: "", address: "",
-        gstin: "", state: "", stateCode: "",
+        gstin: "", pincode: "", state: "", stateCode: "",
       });
     }
   }, [open, clientToEdit, form]);
@@ -107,13 +113,13 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof clientSchema>) => {
+  const onSubmit = async (values: ClientFormValues) => {
     try {
       if (clientToEdit) {
-        await clientService.update(clientToEdit.id, values);
+        await clientService.update(clientToEdit.id, values as any);
         toast.success("Client updated");
       } else {
-        await clientService.create(values);
+        await clientService.create(values as any);
         toast.success("Client created");
       }
       onSuccess();
@@ -138,7 +144,7 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
             <div className="col-span-2">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client / Company Name</FormLabel>
+                  <FormLabel>Client / Company Name *</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <User className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -149,20 +155,6 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
                 </FormItem>
               )} />
             </div>
-
-            {/* Email */}
-            <FormField control={form.control} name="email" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input className="pl-9" placeholder="email@example.com" {...field} />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
 
             {/* Phone */}
             <FormField control={form.control} name="phone" render={({ field }) => (
@@ -178,6 +170,20 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
               </FormItem>
             )} />
 
+            {/* Email */}
+            <FormField control={form.control} name="email" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input className="pl-9" placeholder="email@example.com" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             {/* Address */}
             <div className="col-span-2">
               <FormField control={form.control} name="address" render={({ field }) => (
@@ -185,8 +191,8 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
                   <FormLabel>Billing Address</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input className="pl-9" placeholder="Shop No 1, Main Road..." {...field} />
+                      <MapPin className="absolute left-2.5 top-3 h-4 w-4 text-gray-500" />
+                      <Textarea className="pl-9 min-h-[80px]" placeholder="Shop No 1, Main Road..." {...field} />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -195,20 +201,32 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
             </div>
 
             {/* GSTIN */}
-            <div className="col-span-2">
-              <FormField control={form.control} name="gstin" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>GSTIN</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Building2 className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input className="pl-9" placeholder="27AAOPY..." {...field} />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            <FormField control={form.control} name="gstin" render={({ field }) => (
+              <FormItem>
+                <FormLabel>GSTIN</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Building2 className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input className="pl-9" placeholder="27AAOPY..." {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* Pincode (Vital for E-Way Bill) */}
+            <FormField control={form.control} name="pincode" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pincode</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input className="pl-9" maxLength={6} placeholder="400001" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             {/* State Dropdown */}
             <FormField control={form.control} name="state" render={({ field }) => (
@@ -233,18 +251,18 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
               </FormItem>
             )} />
 
-            {/* State Code (Read Only) */}
+            {/* State Code (Auto-filled) */}
             <FormField control={form.control} name="stateCode" render={({ field }) => (
               <FormItem>
                 <FormLabel>State Code</FormLabel>
                 <FormControl>
-                  <Input {...field} readOnly className="bg-gray-100" placeholder="Auto-filled" />
+                  <Input {...field} readOnly className="bg-gray-100" placeholder="--" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
-            <div className="col-span-2 mt-4">
+            <div className="col-span-2 mt-4 pt-2 border-t">
               <Button type="submit" className="w-full">
                 {clientToEdit ? "Update Client" : "Create Client"}
               </Button>

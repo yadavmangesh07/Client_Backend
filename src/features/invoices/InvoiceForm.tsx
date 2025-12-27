@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form, FormControl, FormField, FormItem, FormLabel,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage
 } from "@/components/ui/form";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -23,25 +23,32 @@ import { invoiceService } from "@/services/invoiceService";
 import { clientService } from "@/services/clientService";
 import type { Invoice, Client } from "@/types";
 
+// 👇 UPDATED SCHEMA: Allows empty strings for optional fields
 const invoiceSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   status: z.string(),
   issuedAt: z.string(),
-  dueDate: z.string().optional(),
-  billingAddress: z.string().optional(),
-  shippingAddress: z.string().optional(),
-  transportMode: z.string().optional(),
-  ewayBillNo: z.string().optional(),
-  challanNo: z.string().optional(),
-  challanDate: z.string().optional(),
-  poNumber: z.string().optional(),
-  poDate: z.string().optional(),
+  
+  // Optional text fields (Allow string OR empty string)
+  dueDate: z.string().optional().or(z.literal("")),
+  billingAddress: z.string().optional().or(z.literal("")),
+  shippingAddress: z.string().optional().or(z.literal("")),
+  transportMode: z.string().optional().or(z.literal("")),
+  
+  // 👇 Critical for E-Way Bill flow (allows empty initially)
+  ewayBillNo: z.string().optional().or(z.literal("")),
+  
+  challanNo: z.string().optional().or(z.literal("")),
+  challanDate: z.string().optional().or(z.literal("")),
+  poNumber: z.string().optional().or(z.literal("")),
+  poDate: z.string().optional().or(z.literal("")),
+  
   tax: z.coerce.number().optional(),
 
   items: z.array(z.object({
     description: z.string().min(1, "Required"),
-    hsnCode: z.string().optional(),
-    uom: z.string().optional(),
+    hsnCode: z.string().optional().or(z.literal("")),
+    uom: z.string().optional().or(z.literal("")),
     taxRate: z.coerce.number().min(0),
     qty: z.coerce.number().min(1),
     rate: z.coerce.number().min(0),
@@ -119,7 +126,8 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
     const client = clients.find(c => c.id === clientId);
     if (client) {
       form.setValue("billingAddress", client.address || "");
-      form.setValue("shippingAddress", client.shippingAddress || client.address || "");
+      // Default shipping to billing if not present
+      form.setValue("shippingAddress", client.address || ""); 
     }
   };
 
@@ -143,7 +151,7 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
   const calculatedGrandTotal = calculatedSubtotal + calculatedTotalTax;
 
   const onSubmit = async (values: z.infer<typeof invoiceSchema>) => {
-    // ✅ Fix: Calculate 'amount' for each item before sending to backend
+    // Calculate 'amount' per item
     const itemsWithAmount = values.items.map((item) => ({
       ...item,
       amount: item.qty * item.rate, 
@@ -151,8 +159,9 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
 
     const payload = {
         ...values,
-        items: itemsWithAmount, // Use the items with amount
+        items: itemsWithAmount,
         issuedAt: new Date(values.issuedAt).toISOString(),
+        // Handle Empty Strings for Dates
         dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : undefined,
         challanDate: values.challanDate ? new Date(values.challanDate).toISOString() : undefined,
         poDate: values.poDate ? new Date(values.poDate).toISOString() : undefined,
@@ -196,6 +205,7 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
                       <FormControl><SelectTrigger><SelectValue placeholder="Select Client" /></SelectTrigger></FormControl>
                       <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
               )} />
               <FormField control={form.control} name="issuedAt" render={({ field }) => (
@@ -226,11 +236,15 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
                 )} />
             </div>
 
-            {/* Transport */}
+            {/* Transport & Order Details */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border p-4 rounded-md">
                 <div className="col-span-2 md:col-span-4 font-semibold flex items-center gap-2 text-sm text-gray-600"><Truck className="h-4 w-4"/> Transport & Order Details</div>
+                
                 <FormField control={form.control} name="transportMode" render={({ field }) => <FormItem><FormLabel>Mode</FormLabel><FormControl><Input placeholder="Road" {...field} /></FormControl></FormItem>} />
-                <FormField control={form.control} name="ewayBillNo" render={({ field }) => <FormItem><FormLabel>E-Way Bill</FormLabel><FormControl><Input placeholder="No..." {...field} /></FormControl></FormItem>} />
+                
+                {/* E-Way Bill (Optional initially) */}
+                <FormField control={form.control} name="ewayBillNo" render={({ field }) => <FormItem><FormLabel>E-Way Bill</FormLabel><FormControl><Input placeholder="12 Digits (Optional)" {...field} /></FormControl></FormItem>} />
+                
                 <FormField control={form.control} name="poNumber" render={({ field }) => <FormItem><FormLabel>PO No</FormLabel><FormControl><Input placeholder="PO..." {...field} /></FormControl></FormItem>} />
                 <FormField control={form.control} name="poDate" render={({ field }) => <FormItem><FormLabel>PO Date</FormLabel><FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl></FormItem>} />
                 <FormField control={form.control} name="challanNo" render={({ field }) => <FormItem><FormLabel>Challan No</FormLabel><FormControl><Input placeholder="CH..." {...field} /></FormControl></FormItem>} />
@@ -303,10 +317,10 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
                                         )} />
                                     </td>
                                     <td className="p-3 align-top font-medium text-gray-700">
-                                        {amount.toFixed(2)}
+                                        ₹{amount.toFixed(2)}
                                     </td>
                                     <td className="p-3 align-top font-bold text-gray-900">
-                                        {totalAmount.toFixed(2)}
+                                        ₹{totalAmount.toFixed(2)}
                                     </td>
                                     <td className="p-2 align-top">
                                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>

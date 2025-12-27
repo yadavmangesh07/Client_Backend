@@ -15,13 +15,16 @@ import { Separator } from "@/components/ui/separator";
 import { companyService } from "@/services/companyService";
 import { authService } from "@/services/authService";
 
-// 1. Define Robust Schema (Handles nulls and empty strings)
+// 1. Define Robust Schema
 const companySchema = z.object({
-  id: z.string().optional().nullable(), // Allow null ID
+  id: z.string().optional().nullable(),
   
   companyName: z.string().min(1, "Company Name is required"),
   address: z.string().min(1, "Address is required"),
   
+  // 👇 Added Pincode Validation
+  pincode: z.string().min(6, "Valid 6-digit Pincode required").optional().or(z.literal("")).nullable(),
+
   // Allow string, empty string, or null for optional fields
   phone: z.string().optional().or(z.literal("")).nullable(),
   email: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
@@ -51,7 +54,7 @@ export default function SettingsPage() {
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
     defaultValues: {
-      companyName: "", address: "", phone: "", email: "", website: "",
+      companyName: "", address: "", pincode: "", phone: "", email: "", website: "",
       gstin: "", udyamRegNo: "",
       bankName: "", accountName: "", accountNumber: "", ifscCode: "", branch: "",
       logoUrl: "", signatureUrl: ""
@@ -79,10 +82,11 @@ export default function SettingsPage() {
         const data = await companyService.getProfile();
         if (data) {
           form.reset({
-             // Fix: Ensure nulls are converted to empty strings for inputs
              id: data.id || null, 
              companyName: data.companyName || "",
              address: data.address || "",
+             // 👇 Load Pincode
+             pincode: data.pincode || "", 
              phone: data.phone || "",
              email: data.email || "",
              website: data.website || "",
@@ -199,15 +203,27 @@ export default function SettingsPage() {
 
                     <Separator className="col-span-2 my-2"/>
                     
-                    <FormField control={form.control} name="gstin" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>GSTIN</FormLabel>
-                        <FormControl><Input placeholder="27ABC..." {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
-                    )} />
+                    {/* 👇 GSTIN & PINCODE ROW */}
+                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="gstin" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>GSTIN</FormLabel>
+                            <FormControl><Input placeholder="27ABC..." {...field} value={field.value || ""} /></FormControl>
+                        </FormItem>
+                        )} />
+
+                        {/* New Pincode Field */}
+                        <FormField control={form.control} name="pincode" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pincode (For E-Way Bill)</FormLabel>
+                            <FormControl><Input placeholder="400064" maxLength={6} {...field} value={field.value || ""} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                    </div>
 
                     <FormField control={form.control} name="udyamRegNo" render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="col-span-2">
                         <FormLabel>Udyam Reg No</FormLabel>
                         <FormControl><Input placeholder="MH-19-..." {...field} value={field.value || ""} /></FormControl>
                       </FormItem>
@@ -274,7 +290,6 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
-            {/* --- TAB 3: BRANDING --- */}
             {/* --- TAB 3: BRANDING (With Preview) --- */}
             <TabsContent value="branding">
               <Card>

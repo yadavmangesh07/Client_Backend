@@ -1,28 +1,7 @@
 import apiClient from "@/lib/axios";
+import type { Company } from "@/types";
 
-export interface Company {
-  id?: string;
-  companyName: string;
-  address: string;
-  phone: string;
-  email: string;
-  website?: string;
-  
-  // Tax
-  gstin: string;
-  udyamRegNo?: string;
 
-  // Bank
-  bankName: string;
-  accountName: string;
-  accountNumber: string;
-  ifscCode: string;
-  branch: string;
-
-  // Branding
-  logoUrl?: string;
-  signatureUrl?: string;
-}
 
 export const companyService = {
   getProfile: async () => {

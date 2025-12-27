@@ -75,5 +75,11 @@ export const invoiceService = {
       responseType: "blob",
     });
     return response.data;
-  }
+  },
+  downloadEwayJson: async (id: string): Promise<Blob> => {
+    const response = await apiClient.get(`/invoices/${id}/eway-json`, {
+      responseType: 'blob', // Important for file downloads
+    });
+    return response.data;
+  },
 };
