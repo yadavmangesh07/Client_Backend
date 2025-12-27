@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react"; // 👈 Import Hooks
+import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2 } from "lucide-react"; 
+// 👇 Added FolderOpen import
+import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
-import { companyService } from "@/services/companyService"; // 👈 Import Company Service
+import { companyService } from "@/services/companyService"; 
 
 export function MainLayout() {
   const location = useLocation();
   
-  // 1. State to hold branding info
   const [brand, setBrand] = useState({ name: "JMD Decor", logo: "" });
 
-  // 2. Load Profile on Mount
   useEffect(() => {
     const loadBranding = async () => {
       try {
@@ -33,6 +32,10 @@ export function MainLayout() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
+    
+    // 👇 NEW: Files & Folders Tab
+    { href: "/files", label: "Files & Folders", icon: FolderOpen },
+    
     { label: "Settings", href: "/settings", icon: Settings },
     { label: "My Company", href: "/profile", icon: User },
   ];
@@ -48,10 +51,9 @@ export function MainLayout() {
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
         
-        {/* 👇 3. Dynamic Brand Header */}
+        {/* Brand Header */}
         <div className="flex h-16 shrink-0 items-center border-b px-6">
           {brand.logo ? (
-            // Option A: Show Logo if it exists
             <Link to="/" className="flex items-center gap-2 font-semibold">
               <img 
                 src={brand.logo} 
@@ -60,7 +62,6 @@ export function MainLayout() {
               />
             </Link>
           ) : (
-            // Option B: Show Text/Icon if no logo
             <Link to="/" className="flex items-center gap-2 font-semibold">
               <Building2 className="h-6 w-6 text-primary" />
               <span>{brand.name}</span>
@@ -72,6 +73,7 @@ export function MainLayout() {
         <nav className="flex-1 flex flex-col gap-4 px-2 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
+            // Check if current path matches
             const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
             
             return (
@@ -90,7 +92,7 @@ export function MainLayout() {
           })}
         </nav>
 
-        {/* Logout Button at bottom */}
+        {/* Logout Button */}
         <div className="border-t p-4">
           <button
             onClick={handleLogout}

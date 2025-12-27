@@ -12,6 +12,8 @@ import LoginPage from "./pages/auth/LoginPage";
 // Auth Guard
 import { ProtectedRoute } from "./pages/auth/ProtectedRoute";
 import SettingsPage from "./pages/settings/SettingsPage";
+import FilesPage from "./pages/files/FilesPage";
+import ClientProjectsPage from "./pages/projects/ClientProjectsPage";
 
 function App() {
   return (
@@ -32,6 +34,8 @@ function App() {
             <Route path="/invoices" element={<InvoicePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<CompanyProfilePage />} />
+            <Route path="/files" element={<FilesPage />} />
+            <Route path="/files/:clientId" element={<ClientProjectsPage />} />
           </Route>
         </Route>
 

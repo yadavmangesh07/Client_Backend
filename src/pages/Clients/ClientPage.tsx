@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Calendar, MapPin, Hash, Phone, Mail, Building2 } from "lucide-react";
+// 👇 Import useNavigate
+import { useNavigate } from "react-router-dom"; 
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Calendar, MapPin, Hash, Phone, Mail, Building2, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -35,7 +36,10 @@ import { clientService } from "@/services/clientService";
 import type { Client } from "@/types";
 import { ClientForm } from "@/features/clients/ClientForm";
 
+// ❌ Removed ProjectManager import (we navigate to a new page now)
+
 export default function ClientPage() {
+  const navigate = useNavigate(); // 👈 Initialize Navigation
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -47,6 +51,8 @@ export default function ClientPage() {
   // View Details State
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+
+  // ❌ Removed ProjectManager State (isProjectManagerOpen, projectClient)
 
   const loadClients = async () => {
     setLoading(true);
@@ -90,6 +96,11 @@ export default function ClientPage() {
     setIsViewOpen(true);
   };
 
+  // 👇 UPDATED: Navigate to the Full Page View
+  const handleManageProjects = (client: Client) => {
+    navigate(`/files/${client.id}`);
+  };
+
   // Filter clients based on search
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -127,7 +138,6 @@ export default function ClientPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              {/* Removed Contact, GSTIN, Location columns */}
               <TableHead>Added On</TableHead>
               <TableHead>Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -148,23 +158,19 @@ export default function ClientPage() {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-semibold text-gray-900">{client.name}</span>
-                            {/* Show subtle email/phone below name for quick context */}
                             <span className="text-xs text-gray-500">{client.phone || client.email || "No contact info"}</span>
                         </div>
                     </div>
                   </TableCell>
 
-                  {/* Added On */}
                   <TableCell className="text-sm text-gray-500">
                     {client.createdAt ? format(new Date(client.createdAt), 'MMM dd, yyyy') : '-'}
                   </TableCell>
                   
-                  {/* Last Updated */}
                   <TableCell className="text-sm text-gray-500">
                     {client.updatedAt ? format(new Date(client.updatedAt), 'MMM dd, yyyy') : '-'}
                   </TableCell>
                   
-                  {/* Actions */}
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -176,9 +182,13 @@ export default function ClientPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         
-                        {/* 👇 NEW VIEW OPTION */}
                         <DropdownMenuItem onClick={() => handleView(client)}>
                           <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+
+                        {/* 👇 UPDATED: Navigate to full page */}
+                        <DropdownMenuItem onClick={() => handleManageProjects(client)}>
+                            <FolderOpen className="mr-2 h-4 w-4" /> Documents & Projects
                         </DropdownMenuItem>
                         
                         <DropdownMenuSeparator />
@@ -206,7 +216,7 @@ export default function ClientPage() {
         onSuccess={loadClients}
       />
 
-      {/* 👇 CLIENT DETAILS VIEW DIALOG */}
+      {/* CLIENT DETAILS VIEW DIALOG */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -220,7 +230,6 @@ export default function ClientPage() {
 
           {viewingClient && (
             <div className="grid gap-4 py-4">
-                {/* Contact Section */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3"/> Phone</span>
@@ -232,13 +241,11 @@ export default function ClientPage() {
                     </div>
                 </div>
 
-                {/* Business Details */}
                 <div className="space-y-1 bg-gray-50 p-3 rounded-md">
                      <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Building2 className="h-3 w-3"/> GSTIN</span>
                      <p className="text-sm font-mono tracking-wide">{viewingClient.gstin || "Unregistered"}</p>
                 </div>
 
-                {/* Address Section */}
                 <div className="space-y-1">
                     <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><MapPin className="h-3 w-3"/> Billing Address</span>
                     <p className="text-sm leading-relaxed text-gray-700">{viewingClient.address || "-"}</p>
@@ -255,7 +262,6 @@ export default function ClientPage() {
                     </div>
                 </div>
 
-                {/* Meta Data */}
                 <div className="border-t pt-3 mt-2 grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Calendar className="h-3 w-3"/> Added On</span>
@@ -270,7 +276,6 @@ export default function ClientPage() {
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
