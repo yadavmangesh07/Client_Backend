@@ -326,16 +326,16 @@ export function InvoiceForm({ open, onOpenChange, invoiceToEdit, onSuccess }: In
                 <div className="w-1/3 space-y-2 border p-4 rounded-md bg-gray-50">
                     <div className="flex justify-between text-sm">
                         <span>Base Amount (Subtotal):</span>
-                        <span>${calculatedSubtotal.toFixed(2)}</span>
+                        <span>₹{calculatedSubtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span>Total GST:</span>
-                        <span>${calculatedTotalTax.toFixed(2)}</span>
+                        <span>₹{calculatedTotalTax.toFixed(2)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-lg pt-2">
                         <span>Grand Total:</span>
-                        <span>${calculatedGrandTotal.toFixed(2)}</span>
+                        <span>₹{calculatedGrandTotal.toFixed(2)}</span>
                     </div>
                 </div>
             </div>

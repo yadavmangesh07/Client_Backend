@@ -275,29 +275,71 @@ export default function SettingsPage() {
             </TabsContent>
 
             {/* --- TAB 3: BRANDING --- */}
+            {/* --- TAB 3: BRANDING (With Preview) --- */}
             <TabsContent value="branding">
               <Card>
                 <CardHeader>
                   <CardTitle>Branding</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                     <div className="p-4 border rounded-md bg-yellow-50 text-yellow-800 text-sm">
-                        ⚠️ <strong>Note:</strong> Paste image URLs if you have them hosted online, or use localhost URLs for now.
-                     </div>
+                <CardContent className="space-y-6">
+                  
+                  {/* LOGO SECTION */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="logoUrl" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Logo URL</FormLabel>
-                        <FormControl><Input placeholder="http://localhost:5173/logo.png" {...field} value={field.value || ""} /></FormControl>
+                        <FormControl>
+                            <Input placeholder="/logo.png" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">Path to image in public folder (e.g., /logo.png)</p>
                       </FormItem>
                     )} />
+
+                    {/* Live Preview Box */}
+                    <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
+                        <span className="text-xs text-gray-400 mb-2">Logo Preview</span>
+                        {form.watch("logoUrl") ? (
+                            <img 
+                                src={form.watch("logoUrl") || ""} 
+                                alt="Logo Preview" 
+                                className="h-16 object-contain"
+                                onError={(e) => (e.currentTarget.style.display = 'none')} // Hide if broken
+                            />
+                        ) : (
+                            <ImageIcon className="h-8 w-8 text-gray-300" />
+                        )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* SIGNATURE SECTION */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="signatureUrl" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Signature URL</FormLabel>
-                        <FormControl><Input placeholder="http://localhost:5173/signature.png" {...field} value={field.value || ""} /></FormControl>
+                        <FormControl>
+                            <Input placeholder="/signature.png" {...field} value={field.value || ""} />
+                        </FormControl>
                       </FormItem>
                     )} />
+
+                     {/* Live Preview Box */}
+                     <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
+                        <span className="text-xs text-gray-400 mb-2">Signature Preview</span>
+                        {form.watch("signatureUrl") ? (
+                            <img 
+                                src={form.watch("signatureUrl") || ""} 
+                                alt="Sig Preview" 
+                                className="h-16 object-contain"
+                                onError={(e) => (e.currentTarget.style.display = 'none')} 
+                            />
+                        ) : (
+                            <div className="text-gray-300 text-xs italic">No Signature</div>
+                        )}
+                    </div>
                   </div>
+
                   <div className="flex justify-end pt-4">
                      <Button type="submit" disabled={isLoading}>
                         {isLoading ? "Saving..." : <><Save className="mr-2 h-4 w-4"/> Save Branding</>}

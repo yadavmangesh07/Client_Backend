@@ -24,7 +24,7 @@ import {
 
 // Services & Types
 import { invoiceService } from "@/services/invoiceService";
-import { clientService } from "@/services/clientService"; // Import Client Service
+import { clientService } from "@/services/clientService"; 
 import apiClient from "@/lib/axios"; 
 import type { Invoice, PageResponse, Client } from "@/types";
 
@@ -34,30 +34,28 @@ import { InvoiceForm } from "@/features/invoices/InvoiceForm";
 export default function InvoicePage() {
   const [data, setData] = useState<PageResponse<Invoice> | null>(null);
   const [loading, setLoading] = useState(false);
-  const [clients, setClients] = useState<Client[]>([]); // Store list of clients for filter
+  const [clients, setClients] = useState<Client[]>([]); 
   
   // --- Filter States ---
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
-  const [sortOrder, setSortOrder] = useState<string>("desc"); // desc = Newest First
+  const [sortOrder, setSortOrder] = useState<string>("desc"); 
 
-  // State for the popup form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
-  // 1. Load Clients (for the dropdown)
+  // 1. Load Clients
   useEffect(() => {
     clientService.getAll().then(setClients).catch(console.error);
   }, []);
 
-  // 2. Load Invoices (Triggers whenever filters change)
+  // 2. Load Invoices
   const loadInvoices = async () => {
     setLoading(true);
     try {
-      // Build Query Params based on state
       const params: any = {
         page: 0,
-        size: 20, // Adjust page size as needed
+        size: 20, 
         sort: `issuedAt,${sortOrder}`
       };
 
@@ -78,7 +76,6 @@ export default function InvoicePage() {
     }
   };
 
-  // Re-run search when any filter changes
   useEffect(() => {
     loadInvoices();
   }, [filterClient, filterStatus, sortOrder]);
@@ -135,7 +132,6 @@ export default function InvoicePage() {
     }
   };
 
-  // Helper to clear filters
   const resetFilters = () => {
     setFilterClient("ALL");
     setFilterStatus("ALL");
@@ -145,7 +141,7 @@ export default function InvoicePage() {
   return (
     <div className="space-y-6">
       
-      {/* Header & Create Button */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
@@ -156,13 +152,12 @@ export default function InvoicePage() {
         </Button>
       </div>
 
-      {/* 🔍 FILTER BAR */}
+      {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-md border shadow-sm">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mr-2">
             <Filter className="h-4 w-4" /> Filters:
         </div>
 
-        {/* Client Filter */}
         <div className="w-[200px]">
             <Select value={filterClient} onValueChange={setFilterClient}>
                 <SelectTrigger className="h-9">
@@ -177,7 +172,6 @@ export default function InvoicePage() {
             </Select>
         </div>
 
-        {/* Status Filter */}
         <div className="w-[150px]">
              <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-9">
@@ -193,7 +187,6 @@ export default function InvoicePage() {
             </Select>
         </div>
 
-        {/* Sort Order */}
         <div className="w-[160px]">
              <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="h-9">
@@ -206,7 +199,6 @@ export default function InvoicePage() {
             </Select>
         </div>
 
-        {/* Reset Button (Only show if filters are active) */}
         {(filterClient !== "ALL" || filterStatus !== "ALL") && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-red-500 hover:text-red-600 hover:bg-red-50">
                 <X className="mr-1 h-3 w-3" /> Reset
@@ -241,13 +233,12 @@ export default function InvoicePage() {
               </TableRow>
             ) : (
               data.content.map((inv) => {
-                // Find client name safely
                 const clientName = clients.find(c => c.id === inv.clientId)?.name || "Unknown Client";
                 
                 return (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
-                  <TableCell>{clientName}</TableCell> {/* Display Client Name */}
+                  <TableCell>{clientName}</TableCell>
                   <TableCell>
                     {inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM dd, yyyy') : '-'}
                   </TableCell>
@@ -256,8 +247,9 @@ export default function InvoicePage() {
                         {inv.status}
                     </Badge>
                   </TableCell>
+                  {/* 👇 UPDATED TO RUPEE HERE */}
                   <TableCell className="text-right font-bold">
-                    ${inv.total.toFixed(2)}
+                    ₹{inv.total.toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(inv)} title="Download PDF">

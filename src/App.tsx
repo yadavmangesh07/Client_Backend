@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/layout/MainLayout"; 
 
 // Pages
+import CompanyProfilePage from "@/pages/profile/CompanyProfilePage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ClientPage from "./pages/Clients/ClientPage";
 import InvoicePage from "./pages/invoices/InvoicePage";
@@ -30,6 +31,7 @@ function App() {
             <Route path="/clients" element={<ClientPage />} />
             <Route path="/invoices" element={<InvoicePage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/profile" element={<CompanyProfilePage />} />
           </Route>
         </Route>
 
