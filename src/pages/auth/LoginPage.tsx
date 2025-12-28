@@ -83,7 +83,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <CardDescription>Login to manage your clients and invoices</CardDescription>
+          <CardDescription>Please enter you credentials</CardDescription>
         </CardHeader>
 
         <CardContent>

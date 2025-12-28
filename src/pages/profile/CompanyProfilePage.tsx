@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { 
   Building2, Landmark, Mail, Phone, Globe, MapPin, 
-  Copy, Check, CreditCard, FileText 
+  Copy
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

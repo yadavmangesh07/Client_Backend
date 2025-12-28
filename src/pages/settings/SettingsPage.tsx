@@ -15,6 +15,9 @@ import { Separator } from "@/components/ui/separator";
 import { companyService } from "@/services/companyService";
 import { authService } from "@/services/authService";
 
+// 👇 Import the Password Dialog
+import { PasswordConfirmDialog } from "@/components/common/PasswordConfirmDialog";
+
 // 1. Define Robust Schema
 const companySchema = z.object({
   id: z.string().optional().nullable(),
@@ -22,10 +25,8 @@ const companySchema = z.object({
   companyName: z.string().min(1, "Company Name is required"),
   address: z.string().min(1, "Address is required"),
   
-  // 👇 Added Pincode Validation
   pincode: z.string().min(6, "Valid 6-digit Pincode required").optional().or(z.literal("")).nullable(),
 
-  // Allow string, empty string, or null for optional fields
   phone: z.string().optional().or(z.literal("")).nullable(),
   email: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
   website: z.string().optional().or(z.literal("")).nullable(),
@@ -47,6 +48,10 @@ type CompanyFormValues = z.infer<typeof companySchema>;
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   
+  // 👇 State for Password Confirmation
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<CompanyFormValues | null>(null);
+
   // State for Team Management
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "USER" });
   const [users, setUsers] = useState<any[]>([]);
@@ -85,7 +90,6 @@ export default function SettingsPage() {
              id: data.id || null, 
              companyName: data.companyName || "",
              address: data.address || "",
-             // 👇 Load Pincode
              pincode: data.pincode || "", 
              phone: data.phone || "",
              email: data.email || "",
@@ -108,16 +112,26 @@ export default function SettingsPage() {
     loadProfile();
   }, [form]);
 
-  const onSubmit = async (values: CompanyFormValues) => {
+  // 👇 1. Intercept Submit: Open Dialog instead of saving immediately
+  const onFormSubmit = (values: CompanyFormValues) => {
+    setPendingValues(values);
+    setIsConfirmOpen(true);
+  };
+
+  // 👇 2. Actual Save: Triggered only after password matches
+  const handleFinalSave = async () => {
+    if (!pendingValues) return;
+
     setIsLoading(true);
     try {
-      await companyService.saveProfile(values as any); 
-      toast.success("Company Profile Saved!");
+      await companyService.saveProfile(pendingValues as any); 
+      toast.success("Settings saved successfully!");
     } catch (error) {
       console.error(error);
       toast.error("Failed to save settings.");
     } finally {
       setIsLoading(false);
+      setPendingValues(null); // Clear pending data
     }
   };
 
@@ -153,7 +167,8 @@ export default function SettingsPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Pass onFormSubmit (which opens dialog) instead of direct save */}
+        <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-8">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general"><Building2 className="w-4 h-4 mr-2"/> General</TabsTrigger>
@@ -203,7 +218,6 @@ export default function SettingsPage() {
 
                     <Separator className="col-span-2 my-2"/>
                     
-                    {/* 👇 GSTIN & PINCODE ROW */}
                     <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="gstin" render={({ field }) => (
                         <FormItem>
@@ -212,7 +226,6 @@ export default function SettingsPage() {
                         </FormItem>
                         )} />
 
-                        {/* New Pincode Field */}
                         <FormField control={form.control} name="pincode" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Pincode (For E-Way Bill)</FormLabel>
@@ -231,7 +244,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex justify-end pt-4">
                      <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Saving..." : <><Save className="mr-2 h-4 w-4"/> Save Company Profile</>}
+                        {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Company Profile</>}
                      </Button>
                   </div>
                 </CardContent>
@@ -283,14 +296,14 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex justify-end pt-4">
                      <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Saving..." : <><Save className="mr-2 h-4 w-4"/> Save Bank Details</>}
+                        {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Bank Details</>}
                      </Button>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* --- TAB 3: BRANDING (With Preview) --- */}
+            {/* --- TAB 3: BRANDING --- */}
             <TabsContent value="branding">
               <Card>
                 <CardHeader>
@@ -298,7 +311,6 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   
-                  {/* LOGO SECTION */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="logoUrl" render={({ field }) => (
                       <FormItem>
@@ -310,7 +322,6 @@ export default function SettingsPage() {
                       </FormItem>
                     )} />
 
-                    {/* Live Preview Box */}
                     <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
                         <span className="text-xs text-gray-400 mb-2">Logo Preview</span>
                         {form.watch("logoUrl") ? (
@@ -318,7 +329,7 @@ export default function SettingsPage() {
                                 src={form.watch("logoUrl") || ""} 
                                 alt="Logo Preview" 
                                 className="h-16 object-contain"
-                                onError={(e) => (e.currentTarget.style.display = 'none')} // Hide if broken
+                                onError={(e) => (e.currentTarget.style.display = 'none')}
                             />
                         ) : (
                             <ImageIcon className="h-8 w-8 text-gray-300" />
@@ -328,7 +339,6 @@ export default function SettingsPage() {
 
                   <Separator />
 
-                  {/* SIGNATURE SECTION */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="signatureUrl" render={({ field }) => (
                       <FormItem>
@@ -339,7 +349,6 @@ export default function SettingsPage() {
                       </FormItem>
                     )} />
 
-                     {/* Live Preview Box */}
                      <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
                         <span className="text-xs text-gray-400 mb-2">Signature Preview</span>
                         {form.watch("signatureUrl") ? (
@@ -357,7 +366,7 @@ export default function SettingsPage() {
 
                   <div className="flex justify-end pt-4">
                      <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Saving..." : <><Save className="mr-2 h-4 w-4"/> Save Branding</>}
+                        {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Branding</>}
                      </Button>
                   </div>
                 </CardContent>
@@ -373,7 +382,6 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   
-                  {/* Add New User Form */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md bg-gray-50">
                     <div className="col-span-2 font-medium text-sm text-gray-700">Add New User</div>
                     
@@ -415,7 +423,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Existing Users List */}
                   <div>
                     <h3 className="text-sm font-semibold mb-3">Existing Users</h3>
                     <div className="border rounded-md divide-y">
@@ -448,6 +455,15 @@ export default function SettingsPage() {
           </Tabs>
         </form>
       </Form>
+
+      {/* 👇 Password Confirmation Dialog Component */}
+      <PasswordConfirmDialog 
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        onConfirmed={handleFinalSave}
+        title="Confirm Security Action"
+        description="Please enter your password to confirm updates to the company profile."
+      />
     </div>
   );
 }

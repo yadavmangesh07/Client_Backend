@@ -15,7 +15,7 @@ export const companyService = {
   },
 
   // Helper to upload Logo/Signature
-  uploadFile: async (file: File) => {
+  uploadFile: async (_file: File) => {
     // We reuse your existing generic file upload endpoint
     // NOTE: We need to check if your backend supports a generic /upload endpoint.
     // If you used the InvoiceAttachmentController logic, we might need a dedicated endpoint.

@@ -1,5 +1,5 @@
 import apiClient from "@/lib/axios";
-import type { LoginRequest, AuthResponse } from "@/types";
+import type { LoginRequest } from "@/types";
 export interface User {
   id: string;
   username: string;
@@ -52,6 +52,14 @@ export const authService = {
 
   register: async (username: string, password: string, role: string = "USER") => {
     return await apiClient.post("/auth/register", { username, password, role });
-  }
+  },
+  // ... inside authService object
+
+  verifyPassword: async (password: string) => {
+    const response = await apiClient.post("/auth/verify-password", { password });
+    return response.data;
+  },
+
+// ...
   
 };

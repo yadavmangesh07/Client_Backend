@@ -7,12 +7,13 @@ import {
   XAxis 
 } from "recharts";
 import { 
-  DollarSign, 
+  IndianRupee, // Changed to Rupee based on your region
   Users, 
   FileText, 
   Activity 
 } from "lucide-react";
 import { format } from "date-fns";
+import apiClient from "@/lib/axios"; // Direct axios usage is often simpler for one-off pages
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart"; 
 
-import { dashboardService, type DashboardStats } from "@/services/dashboardService";
 import type { Invoice } from "@/types"; 
 
 // Define Chart Config
@@ -36,14 +36,15 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<any>(null); // Using any to be flexible with backend map
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const data = await dashboardService.getStats();
-        setStats(data);
+        // Matches the Backend Controller @GetMapping("/stats")
+        const res = await apiClient.get("/dashboard/stats");
+        setStats(res.data);
       } catch (error) {
         console.error(error);
         toast.error("Failed to load dashboard data");
@@ -73,11 +74,11 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <IndianRupee className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            {/* 👇 FIX: Use (value || 0) to prevent crash */}
-            <div className="text-2xl font-bold">${(stats.totalRevenue || 0).toFixed(2)}</div>
+            {/* Safety Check: (val || 0) */}
+            <div className="text-2xl font-bold">₹{(stats.totalRevenue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Lifetime collected</p>
           </CardContent>
         </Card>
@@ -88,8 +89,7 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            {/* 👇 FIX: Use (value || 0) to prevent crash */}
-            <div className="text-2xl font-bold">${(stats.pendingAmount || 0).toFixed(2)}</div>
+            <div className="text-2xl font-bold text-red-600">₹{(stats.pendingAmount || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Unpaid invoices</p>
           </CardContent>
         </Card>
@@ -120,15 +120,15 @@ export default function DashboardPage() {
       {/* --- CHART & RECENT ACTIVITY --- */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         
-        {/* SHADCN CHART SECTION */}
+        {/* CHART SECTION */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Monthly revenue for the last 6 months</CardDescription>
+            <CardDescription>Monthly revenue trends (Coming Soon)</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-              {/* 👇 FIX: Ensure data is an array */}
+              {/* Ensure data is an array (stats.monthlyStats might be empty initially) */}
               <BarChart accessibilityLayer data={stats.monthlyStats || []}>
                 <CartesianGrid vertical={false} />
                 <XAxis
@@ -146,6 +146,11 @@ export default function DashboardPage() {
                 />
               </BarChart>
             </ChartContainer>
+            {(!stats.monthlyStats || stats.monthlyStats.length === 0) && (
+                <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+                    No historical data available yet.
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -153,13 +158,13 @@ export default function DashboardPage() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Recent Invoices</CardTitle>
-            <CardDescription>Latest 5 transactions</CardDescription>
+            <CardDescription>Latest transactions</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* 👇 FIX: Ensure array exists and has length */}
+              {/* Ensure array exists */}
               {(!stats.recentInvoices || stats.recentInvoices.length === 0) ? (
-                <p className="text-sm text-muted-foreground">No recent activity.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No recent activity.</p>
               ) : (
                 stats.recentInvoices.map((inv: Invoice) => (
                   <div key={inv.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
@@ -171,13 +176,13 @@ export default function DashboardPage() {
                         {inv.issuedAt ? format(new Date(inv.issuedAt), "MMM dd, yyyy") : "No Date"}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge variant={inv.status === 'PAID' ? 'default' : 'secondary'} className="text-xs">
+                    <div className="flex flex-col items-end gap-1">
+                        <div className="font-bold text-sm">
+                            ₹{(inv.total || 0).toFixed(2)}
+                        </div>
+                        <Badge variant={inv.status === 'PAID' ? 'default' : 'secondary'} className="text-[10px] h-5 px-1.5">
                             {inv.status}
                         </Badge>
-                        <div className="font-bold text-sm">
-                            ${(inv.total || 0).toFixed(2)}
-                        </div>
                     </div>
                   </div>
                 ))
