@@ -16,6 +16,7 @@ import FilesPage from "./pages/files/FilesPage";
 import ClientProjectsPage from "./pages/projects/ClientProjectsPage";
 import ChallanListPage from "./pages/challan/ChallanListPage";
 import ChallanFormPage from "./pages/challan/ChallanFormPage";
+import MyAccountPage from "./pages/settings/MyAccountPage";
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
             <Route path="/challans" element={<ChallanListPage />} />
             <Route path="/challans/new" element={<ChallanFormPage />} />
             <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
+            <Route path="/account" element={<MyAccountPage />} />
           </Route>
         </Route>
 

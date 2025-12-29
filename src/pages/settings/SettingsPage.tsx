@@ -18,7 +18,7 @@ import { authService, type User } from "@/services/authService";
 
 import { PasswordConfirmDialog } from "@/components/common/PasswordConfirmDialog";
 
-// 1. Schema - Updated with new fields
+// 1. Schema
 const companySchema = z.object({
   id: z.string().optional().nullable(),
   companyName: z.string().min(1, "Company Name is required"),
@@ -26,11 +26,8 @@ const companySchema = z.object({
   pincode: z.string().min(6, "Valid 6-digit Pincode required").optional().or(z.literal("")).nullable(),
   phone: z.string().optional().or(z.literal("")).nullable(),
   email: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
-  
-  // 👇 NEW FIELDS
   secondaryEmail: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
   secondaryPhone: z.string().optional().or(z.literal("")).nullable(),
-
   website: z.string().optional().or(z.literal("")).nullable(),
   gstin: z.string().optional().or(z.literal("")).nullable(),
   udyamRegNo: z.string().optional().or(z.literal("")).nullable(),
@@ -51,7 +48,6 @@ type PendingAction =
 
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
@@ -63,7 +59,7 @@ export default function SettingsPage() {
     resolver: zodResolver(companySchema),
     defaultValues: {
       companyName: "", address: "", pincode: "", phone: "", email: "", 
-      secondaryEmail: "", secondaryPhone: "", // 👈 Added defaults
+      secondaryEmail: "", secondaryPhone: "", 
       website: "", gstin: "", udyamRegNo: "", bankName: "", accountName: "", accountNumber: "", 
       ifscCode: "", branch: "", logoUrl: "", signatureUrl: ""
     }
@@ -83,25 +79,10 @@ export default function SettingsPage() {
       const data = await companyService.getProfile();
       if (data) {
         form.reset({
+           ...data,
            id: data.id || null, 
-           companyName: data.companyName || "",
-           address: data.address || "",
-           pincode: data.pincode || "", 
-           phone: data.phone || "",
-           email: data.email || "",
-           
-           // 👇 Load new data
            secondaryEmail: data.secondaryEmail || "",
            secondaryPhone: data.secondaryPhone || "",
-
-           website: data.website || "",
-           gstin: data.gstin || "",
-           udyamRegNo: data.udyamRegNo || "",
-           bankName: data.bankName || "",
-           accountName: data.accountName || "",
-           accountNumber: data.accountNumber || "",
-           ifscCode: data.ifscCode || "",
-           branch: data.branch || "",
            logoUrl: data.logoUrl || "",
            signatureUrl: data.signatureUrl || ""
         });
@@ -125,7 +106,11 @@ export default function SettingsPage() {
     setIsConfirmOpen(true);
   };
 
-  const onDeleteClick = (id: string, username: string) => {
+  // 👇 UPDATED: Accepts event 'e' to stop default form submission
+  const onDeleteClick = (e: React.MouseEvent, id: string, username: string) => {
+    e.preventDefault(); 
+    e.stopPropagation();
+    
     if (!confirm(`Are you sure you want to remove access for ${username}?`)) return;
     setPendingAction({ type: 'DELETE_USER', payload: { id, username } });
     setIsConfirmOpen(true);
@@ -162,7 +147,7 @@ export default function SettingsPage() {
       setNewUser({ username: "", password: "", role: "USER" }); 
       loadUsers(); 
     } catch (err: any) {
-        const msg = err.response?.data || "Failed to add user";
+        const msg = err.response?.data?.message || "Failed to add user";
         toast.error(msg);
     }
   };
@@ -176,340 +161,230 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your company profile and configurations.</p>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-8">
-          <Tabs defaultValue="general" className="w-full">
-            
-            <TabsList className={cn("grid w-full", isAdmin ? "grid-cols-4" : "grid-cols-3")}>
-              <TabsTrigger value="general"><Building2 className="w-4 h-4 mr-2"/> General</TabsTrigger>
-              <TabsTrigger value="bank"><Landmark className="w-4 h-4 mr-2"/> Bank</TabsTrigger>
-              <TabsTrigger value="branding"><ImageIcon className="w-4 h-4 mr-2"/> Branding</TabsTrigger>
-              {isAdmin && <TabsTrigger value="team"><UserPlus className="w-4 h-4 mr-2"/> Team</TabsTrigger>}
-            </TabsList>
+      {/* 👇 REMOVED OUTER FORM TAG HERE - Split into specific tabs */}
+      
+      <Tabs defaultValue="general" className="w-full">
+        
+        <TabsList className={cn("grid w-full", isAdmin ? "grid-cols-4" : "grid-cols-3")}>
+          <TabsTrigger value="general"><Building2 className="w-4 h-4 mr-2"/> General</TabsTrigger>
+          <TabsTrigger value="bank"><Landmark className="w-4 h-4 mr-2"/> Bank</TabsTrigger>
+          <TabsTrigger value="branding"><ImageIcon className="w-4 h-4 mr-2"/> Branding</TabsTrigger>
+          {isAdmin && <TabsTrigger value="team"><UserPlus className="w-4 h-4 mr-2"/> Team</TabsTrigger>}
+        </TabsList>
 
-            {/* --- TAB 1: GENERAL --- */}
-            <TabsContent value="general">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Company Information</CardTitle>
-                  <CardDescription>
-                    {isAdmin ? "Update your invoice header details." : "View company invoice details (Read Only)."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        {/* --- TAB 1: GENERAL --- */}
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Information</CardTitle>
+              <CardDescription>
+                {isAdmin ? "Update your invoice header details." : "View company invoice details (Read Only)."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 👇 ADDED Form wrapper here for General inputs */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="companyName" render={({ field }) => (
-                      <FormItem className="col-span-2">
-                        <FormLabel>Company Name</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="JMD Décor" {...field} value={field.value || ""} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem className="col-span-2"><FormLabel>Company Name</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="JMD Décor" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
                     )} />
-
-                    {/* Primary Contact Row */}
                     <FormField control={form.control} name="email" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="contact@jmd.com" {...field} value={field.value || ""} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem><FormLabel>Email</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="contact@jmd.com" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
                     )} />
-
                     <FormField control={form.control} name="phone" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="+91 9876543210" {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>Phone</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="+91 98..." {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
-                    {/* 👇 NEW: Secondary Contact Row */}
                     <FormField control={form.control} name="secondaryEmail" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Secondary Email (Optional)</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="alt@jmd.com" {...field} value={field.value || ""} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem><FormLabel>Secondary Email</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="alt@jmd.com" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
                     )} />
-
                     <FormField control={form.control} name="secondaryPhone" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Secondary Phone (Optional)</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="+91 98..." {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>Secondary Phone</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="+91 98..." {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-                    
                     <FormField control={form.control} name="address" render={({ field }) => (
-                      <FormItem className="col-span-2">
-                        <FormLabel>Full Address</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="Shop No 5, Goregaon West..." {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem className="col-span-2"><FormLabel>Full Address</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="Shop No 5..." {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
                     <Separator className="col-span-2 my-2"/>
-                    
-                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="gstin" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>GSTIN</FormLabel>
-                            <FormControl><Input disabled={!isAdmin} placeholder="27ABC..." {...field} value={field.value || ""} /></FormControl>
-                        </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="pincode" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pincode</FormLabel>
-                            <FormControl><Input disabled={!isAdmin} placeholder="400064" maxLength={6} {...field} value={field.value || ""} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )} />
-                    </div>
-
-                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="udyamRegNo" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Udyam Reg No</FormLabel>
-                            <FormControl><Input disabled={!isAdmin} placeholder="MH-19-..." {...field} value={field.value || ""} /></FormControl>
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="website" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Website</FormLabel>
-                            <FormControl><Input disabled={!isAdmin} placeholder="www.jmddecor.com" {...field} value={field.value || ""} /></FormControl>
-                          </FormItem>
-                        )} />
-                    </div>
+                    <FormField control={form.control} name="gstin" render={({ field }) => (
+                        <FormItem><FormLabel>GSTIN</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="27ABC..." {...field} value={field.value || ""} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pincode" render={({ field }) => (
+                        <FormItem><FormLabel>Pincode</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="400064" maxLength={6} {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="udyamRegNo" render={({ field }) => (
+                          <FormItem><FormLabel>Udyam Reg No</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="MH-19-..." {...field} value={field.value || ""} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name="website" render={({ field }) => (
+                          <FormItem><FormLabel>Website</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="www.jmddecor.com" {...field} value={field.value || ""} /></FormControl></FormItem>
+                    )} />
                   </div>
-                  
-                  {isAdmin && (
-                    <div className="flex justify-end pt-4">
-                      <Button type="submit" disabled={isLoading}>
-                          {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Company Profile</>}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  {isAdmin && <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading}>{isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Company Profile</>}</Button></div>}
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* --- TAB 2: BANK --- */}
-            <TabsContent value="bank">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bank Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        {/* --- TAB 2: BANK --- */}
+        <TabsContent value="bank">
+          <Card>
+            <CardHeader><CardTitle>Bank Details</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {/* 👇 ADDED Form wrapper here for Bank inputs */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="bankName" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bank Name</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="Kotak Mahindra Bank" {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>Bank Name</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="Kotak Mahindra Bank" {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
                     <FormField control={form.control} name="branch" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Branch</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="Jawahar Nagar" {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>Branch</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="Jawahar Nagar" {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
                     <FormField control={form.control} name="accountName" render={({ field }) => (
-                      <FormItem className="col-span-2">
-                        <FormLabel>Account Name</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="JMD DÉCOR" {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem className="col-span-2"><FormLabel>Account Name</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="JMD DÉCOR" {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
                     <FormField control={form.control} name="accountNumber" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account Number</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="1234567890" {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>Account Number</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="1234567890" {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
-
                     <FormField control={form.control} name="ifscCode" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>IFSC Code</FormLabel>
-                        <FormControl><Input disabled={!isAdmin} placeholder="KKBK000..." {...field} value={field.value || ""} /></FormControl>
-                      </FormItem>
+                      <FormItem><FormLabel>IFSC Code</FormLabel><FormControl><Input disabled={!isAdmin} placeholder="KKBK000..." {...field} value={field.value || ""} /></FormControl></FormItem>
                     )} />
                   </div>
-                  
-                  {isAdmin && (
-                    <div className="flex justify-end pt-4">
-                      <Button type="submit" disabled={isLoading}>
-                          {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Bank Details</>}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  {isAdmin && <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading}>{isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Bank Details</>}</Button></div>}
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* --- TAB 3: BRANDING --- */}
-            <TabsContent value="branding">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Branding</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  
+        {/* --- TAB 3: BRANDING --- */}
+        <TabsContent value="branding">
+          <Card>
+            <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
+            <CardContent className="space-y-6">
+              {/* 👇 ADDED Form wrapper here for Branding inputs */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="logoUrl" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Logo URL</FormLabel>
-                        <FormControl>
-                            <Input disabled={!isAdmin} placeholder="/logo.png" {...field} value={field.value || ""} />
-                        </FormControl>
+                        <FormControl><Input disabled={!isAdmin} placeholder="/logo.png" {...field} value={field.value || ""} /></FormControl>
                         <p className="text-xs text-muted-foreground">Path to image in public folder</p>
                       </FormItem>
                     )} />
-
                     <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
                         <span className="text-xs text-gray-400 mb-2">Logo Preview</span>
-                        {form.watch("logoUrl") ? (
-                            <img 
-                                src={form.watch("logoUrl") || ""} 
-                                alt="Logo Preview" 
-                                className="h-16 object-contain"
-                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                            />
-                        ) : (
-                            <ImageIcon className="h-8 w-8 text-gray-300" />
-                        )}
+                        {form.watch("logoUrl") ? <img src={form.watch("logoUrl") || ""} alt="Logo" className="h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')}/> : <ImageIcon className="h-8 w-8 text-gray-300" />}
                     </div>
                   </div>
-
                   <Separator />
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="signatureUrl" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Signature URL</FormLabel>
-                        <FormControl>
-                            <Input disabled={!isAdmin} placeholder="/signature.png" {...field} value={field.value || ""} />
-                        </FormControl>
+                        <FormControl><Input disabled={!isAdmin} placeholder="/signature.png" {...field} value={field.value || ""} /></FormControl>
                       </FormItem>
                     )} />
-
                      <div className="border rounded-md p-4 flex flex-col items-center justify-center bg-gray-50 h-32">
                         <span className="text-xs text-gray-400 mb-2">Signature Preview</span>
-                        {form.watch("signatureUrl") ? (
-                            <img 
-                                src={form.watch("signatureUrl") || ""} 
-                                alt="Sig Preview" 
-                                className="h-16 object-contain"
-                                onError={(e) => (e.currentTarget.style.display = 'none')} 
-                            />
-                        ) : (
-                            <div className="text-gray-300 text-xs italic">No Signature</div>
-                        )}
+                        {form.watch("signatureUrl") ? <img src={form.watch("signatureUrl") || ""} alt="Sig" className="h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} /> : <div className="text-gray-300 text-xs italic">No Signature</div>}
                     </div>
                   </div>
+                  {isAdmin && <div className="flex justify-end pt-4"><Button type="submit" disabled={isLoading}>{isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Branding</>}</Button></div>}
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  {isAdmin && (
-                    <div className="flex justify-end pt-4">
-                      <Button type="submit" disabled={isLoading}>
-                          {isLoading ? "Verifying..." : <><Save className="mr-2 h-4 w-4"/> Save Branding</>}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+        {/* --- TAB 4: TEAM ACCESS (ADMIN ONLY) --- */}
+        {isAdmin && (
+          <TabsContent value="team">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-5 w-5 text-amber-600" />
+                    <CardTitle>Team Management</CardTitle>
+                </div>
+                <CardDescription>Create new users or remove existing access.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                
+                {/* ⚠️ NO <FORM> TAG HERE to prevent nested submissions */}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md bg-gray-50">
+                  <div className="col-span-2 font-medium text-sm text-gray-700">Add New User</div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium leading-none">Username</label>
+                    <Input placeholder="new_user" value={newUser.username} onChange={(e) => setNewUser({...newUser, username: e.target.value})} />
+                  </div>
 
-            {/* --- TAB 4: TEAM ACCESS (ADMIN ONLY) --- */}
-            {isAdmin && (
-              <TabsContent value="team">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <ShieldAlert className="h-5 w-5 text-amber-600" />
-                        <CardTitle>Team Management</CardTitle>
-                    </div>
-                    <CardDescription>Create new users or remove existing access.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md bg-gray-50">
-                      <div className="col-span-2 font-medium text-sm text-gray-700">Add New User</div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium leading-none">Password</label>
+                    <Input type="password" placeholder="******" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} />
+                  </div>
+
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm font-medium leading-none">Role</label>
+                    <select 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                    >
+                      <option value="USER">User (Standard)</option>
+                      <option value="ADMIN">Admin (Full Access)</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-2">
+                    <Button type="button" onClick={handleAddUser} className="w-full">
+                      <UserPlus className="mr-2 h-4 w-4" /> Create Account
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Existing Users</h3>
+                  <div className="border rounded-md divide-y">
+                      {users.length === 0 && <div className="p-4 text-center text-gray-500">No users found.</div>}
                       
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none">Username</label>
-                        <Input 
-                          placeholder="new_user" 
-                          value={newUser.username} 
-                          onChange={(e) => setNewUser({...newUser, username: e.target.value})} 
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none">Password</label>
-                        <Input 
-                          type="password" 
-                          placeholder="******" 
-                          value={newUser.password} 
-                          onChange={(e) => setNewUser({...newUser, password: e.target.value})} 
-                        />
-                      </div>
-
-                      <div className="space-y-2 col-span-2">
-                        <label className="text-sm font-medium leading-none">Role</label>
-                        <select 
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                          value={newUser.role}
-                          onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                        >
-                          <option value="USER">User (Standard)</option>
-                          <option value="ADMIN">Admin (Full Access)</option>
-                        </select>
-                      </div>
-
-                      <div className="col-span-2">
-                        <Button type="button" onClick={handleAddUser} className="w-full">
-                          <UserPlus className="mr-2 h-4 w-4" /> Create Account
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3">Existing Users</h3>
-                      <div className="border rounded-md divide-y">
-                          {users.length === 0 && <div className="p-4 text-center text-gray-500">No users found.</div>}
-                          
-                          {users.map((user) => (
-                              <div key={user.id} className="flex items-center justify-between p-3">
-                                  <div className="flex items-center gap-3">
-                                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                                          {user.username.substring(0,2).toUpperCase()}
-                                      </div>
-                                      <div>
-                                          <p className="font-medium text-sm">{user.username}</p>
-                                          <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>
-                                            {user.role}
-                                          </span>
-                                      </div>
+                      {users.map((user) => (
+                          <div key={user.id} className="flex items-center justify-between p-3">
+                              <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                                      {user.username.substring(0,2).toUpperCase()}
                                   </div>
-                                  
-                                  <Button variant="ghost" size="icon" 
-                                    onClick={() => onDeleteClick(user.id!, user.username)} 
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                      <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  <div>
+                                      <p className="font-medium text-sm">{user.username}</p>
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>
+                                        {user.role}
+                                      </span>
+                                  </div>
                               </div>
-                          ))}
-                      </div>
-                    </div>
+                              
+                              {/* 👇 FIXED: type='button' and updated handler */}
+                              <Button 
+                                type="button"
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={(e) => onDeleteClick(e, user.id!, user.username)} 
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      ))}
+                  </div>
+                </div>
 
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
-          </Tabs>
-        </form>
-      </Form>
+      </Tabs>
 
       <PasswordConfirmDialog 
         open={isConfirmOpen}

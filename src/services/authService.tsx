@@ -87,4 +87,19 @@ export const authService = {
   getToken: () => {
     return localStorage.getItem("token");
   },
+  // Add this inside the authService object
+updateCurrentUser: async (data: { username: string; currentPassword: string; newPassword?: string }) => {
+  const response = await apiClient.put("/auth/me", data);
+  
+  // If username changed, update local storage
+  if (data.username) {
+     const userStr = localStorage.getItem("user");
+     if (userStr) {
+         const user = JSON.parse(userStr);
+         user.username = data.username;
+         localStorage.setItem("user", JSON.stringify(user));
+     }
+  }
+  return response.data;
+},
 };
