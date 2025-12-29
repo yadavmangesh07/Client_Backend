@@ -35,42 +35,38 @@ import {
 // Services & Types
 import { invoiceService } from "@/services/invoiceService";
 import { clientService } from "@/services/clientService"; 
-import apiClient from "@/lib/axios"; 
 import type { Invoice, PageResponse, Client } from "@/types";
 
 // Import Forms
 import { InvoiceForm } from "@/features/invoices/InvoiceForm";
 import { EwayBillDialog } from "@/features/invoices/EwayBillDialog";
+import { InvoiceEmailDialog } from "@/features/invoices/InvoiceEmailDialog";
 
 export default function InvoicePage() {
   const [data, setData] = useState<PageResponse<Invoice> | null>(null);
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]); 
   
-  // Filters
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [sortOrder, setSortOrder] = useState<string>("desc"); 
 
-  // Forms State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
-  // E-Way Dialog State
   const [ewayDialog, setEwayDialog] = useState<{open: boolean, invId: string, currentNo: string}>({
       open: false, invId: "", currentNo: ""
   });
 
-  // 👇 PDF PREVIEW STATE
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // 1. Load Clients
+  const [emailDialogData, setEmailDialogData] = useState<{id: string, no: string, email: string} | null>(null);
+
   useEffect(() => {
     clientService.getAll().then(setClients).catch(console.error);
   }, []);
 
-  // 2. Load Invoices
   const loadInvoices = async () => {
     setLoading(true);
     try {
@@ -93,8 +89,6 @@ export default function InvoicePage() {
 
   useEffect(() => { loadInvoices(); }, [filterClient, filterStatus, sortOrder]);
 
-  // --- ACTIONS ---
-
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this invoice?")) return;
     try {
@@ -109,7 +103,6 @@ export default function InvoicePage() {
   const handleCreate = () => { setEditingInvoice(null); setIsFormOpen(true); };
   const handleEdit = (inv: Invoice) => { setEditingInvoice(inv); setIsFormOpen(true); };
 
-  // 👇 VIEW PDF (Without Downloading)
   const handleViewPdf = async (invoice: Invoice) => {
     try {
       toast.info("Loading Preview...");
@@ -123,7 +116,6 @@ export default function InvoicePage() {
     }
   };
 
-  // DOWNLOAD PDF
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       toast.info("Downloading PDF...");
@@ -140,15 +132,13 @@ export default function InvoicePage() {
     }
   };
 
-  const handleSendEmail = async (inv: Invoice) => {
-    if (!confirm(`Send invoice #${inv.invoiceNo} to client via email?`)) return;
-    const toastId = toast.loading("Sending email...");
-    try {
-      await apiClient.post(`/invoices/${inv.id}/send-email`);
-      toast.success("Email sent successfully!", { id: toastId });
-    } catch (error) {
-      toast.error("Failed to send email.", { id: toastId });
-    }
+  const handleSendEmail = (inv: Invoice) => {
+    const client = clients.find(c => c.id === inv.clientId);
+    setEmailDialogData({
+        id: inv.id,
+        no: inv.invoiceNo,
+        email: client?.email || "" 
+    });
   };
 
   const handleDownloadEway = async (invoice: Invoice) => {
@@ -181,7 +171,6 @@ export default function InvoicePage() {
   return (
     <div className="space-y-6">
       
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
@@ -192,11 +181,11 @@ export default function InvoicePage() {
         </Button>
       </div>
 
-      {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-md border shadow-sm">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mr-2">
             <Filter className="h-4 w-4" /> Filters:
         </div>
+        {/* Filters Code... (Unchanged) */}
         <div className="w-[200px]">
             <Select value={filterClient} onValueChange={setFilterClient}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="All Clients" /></SelectTrigger>
@@ -234,7 +223,6 @@ export default function InvoicePage() {
         )}
       </div>
 
-      {/* Table */}
       <div className="border rounded-md bg-white shadow-sm">
         <Table>
           <TableHeader>
@@ -258,7 +246,12 @@ export default function InvoicePage() {
                 const clientName = clients.find(c => c.id === inv.clientId)?.name || "Unknown Client";
                 
                 return (
-                <TableRow key={inv.id}>
+                <TableRow 
+                    key={inv.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    // 👇 This opens the preview for the row
+                    onClick={() => handleViewPdf(inv)}
+                >
                   <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
                   <TableCell>{clientName}</TableCell>
                   <TableCell>{inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM dd, yyyy') : '-'}</TableCell>
@@ -267,8 +260,11 @@ export default function InvoicePage() {
                   </TableCell>
                   <TableCell className="text-right font-bold">₹{inv.total.toFixed(2)}</TableCell>
                   
-                  {/* 👇 CLEAN DROPDOWN MENU */}
-                  <TableCell className="text-right">
+                  {/* 👇 FIX: STOP PROPAGATION HERE */}
+                  <TableCell 
+                    className="text-right" 
+                    onClick={(e) => e.stopPropagation()} 
+                  >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -333,7 +329,6 @@ export default function InvoicePage() {
         onSuccess={loadInvoices} 
       />
 
-      {/* 👇 PDF PREVIEW DIALOG */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-[90vw] w-full h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 pb-2 border-b bg-white rounded-t-lg">
@@ -350,6 +345,16 @@ export default function InvoicePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {emailDialogData && (
+        <InvoiceEmailDialog 
+            open={!!emailDialogData} 
+            onOpenChange={(open) => !open && setEmailDialogData(null)}
+            invoiceId={emailDialogData.id}
+            invoiceNo={emailDialogData.no}
+            clientEmail={emailDialogData.email}
+        />
+      )}
 
     </div>
   );

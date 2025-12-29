@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { Mail, Phone, MapPin, User, Building2, Map, Hash } from "lucide-react"; // Added Hash for Pincode
-
+import {INDIAN_STATES} from "@/constants/constants"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -20,41 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { clientService } from "@/services/clientService";
 import type { Client } from "@/types";
-
-// --- INDIAN STATE CODES (GST) ---
-const INDIAN_STATES = [
-  { name: "Jammu and Kashmir", code: "01" },
-  { name: "Himachal Pradesh", code: "02" },
-  { name: "Punjab", code: "03" },
-  { name: "Chandigarh", code: "04" },
-  { name: "Uttarakhand", code: "05" },
-  { name: "Haryana", code: "06" },
-  { name: "Delhi", code: "07" },
-  { name: "Rajasthan", code: "08" },
-  { name: "Uttar Pradesh", code: "09" },
-  { name: "Bihar", code: "10" },
-  { name: "Sikkim", code: "11" },
-  { name: "Arunachal Pradesh", code: "12" },
-  { name: "Nagaland", code: "13" },
-  { name: "Manipur", code: "14" },
-  { name: "Mizoram", code: "15" },
-  { name: "Tripura", code: "16" },
-  { name: "Meghalaya", code: "17" },
-  { name: "Assam", code: "18" },
-  { name: "West Bengal", code: "19" },
-  { name: "Jharkhand", code: "20" },
-  { name: "Odisha", code: "21" },
-  { name: "Chhattisgarh", code: "22" },
-  { name: "Madhya Pradesh", code: "23" },
-  { name: "Gujarat", code: "24" },
-  { name: "Maharashtra", code: "27" },
-  { name: "Karnataka", code: "29" },
-  { name: "Goa", code: "30" },
-  { name: "Kerala", code: "32" },
-  { name: "Tamil Nadu", code: "33" },
-  { name: "Telangana", code: "36" },
-  { name: "Andhra Pradesh", code: "37" },
-];
 
 const clientSchema = z.object({
   name: z.string().min(1, "Name is required"),
