@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-// 👇 Added FolderOpen import
-import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen } from "lucide-react"; 
+// 👇 Added 'Truck' to imports
+import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen, Truck } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { companyService } from "@/services/companyService"; 
@@ -33,11 +33,15 @@ export function MainLayout() {
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
     
-    // 👇 NEW: Files & Folders Tab
+    // 👇 NEW: Delivery Challans Tab
+    { href: "/challans", label: "Delivery Challans", icon: Truck },
+
     { href: "/files", label: "Files & Folders", icon: FolderOpen },
-    
-    { label: "Settings", href: "/settings", icon: Settings },
+        // Note: 'My Company' (User profile) usually points to /settings or a specific /profile route. Keeping as provided.
+
     { label: "My Company", href: "/profile", icon: User },
+    { label: "Settings", href: "/settings", icon: Settings }
+    
   ];
 
   const handleLogout = () => {

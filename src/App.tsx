@@ -14,6 +14,8 @@ import { ProtectedRoute } from "./pages/auth/ProtectedRoute";
 import SettingsPage from "./pages/settings/SettingsPage";
 import FilesPage from "./pages/files/FilesPage";
 import ClientProjectsPage from "./pages/projects/ClientProjectsPage";
+import ChallanListPage from "./pages/challan/ChallanListPage";
+import ChallanFormPage from "./pages/challan/ChallanFormPage";
 
 function App() {
   return (
@@ -36,6 +38,9 @@ function App() {
             <Route path="/profile" element={<CompanyProfilePage />} />
             <Route path="/files" element={<FilesPage />} />
             <Route path="/files/:clientId" element={<ClientProjectsPage />} />
+            <Route path="/challans" element={<ChallanListPage />} />
+            <Route path="/challans/new" element={<ChallanFormPage />} />
+            <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
           </Route>
         </Route>
 
