@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { Mail, Phone, MapPin, User, Building2, Map, Hash } from "lucide-react"; // Added Hash for Pincode
-import {INDIAN_STATES} from "@/constants/constants"
+// 👇 Removed 'CircleCheck'
+import { Mail, Phone, MapPin, User, Building2, Map, Hash } from "lucide-react"; 
+import { INDIAN_STATES } from "@/constants/constants";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -27,7 +28,6 @@ const clientSchema = z.object({
   phone: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
   gstin: z.string().optional().or(z.literal("")),
-  // 👇 Kept Pincode for E-Way Bill support
   pincode: z.string().min(6, "Must be 6 digits").optional().or(z.literal("")), 
   state: z.string().optional().or(z.literal("")),
   stateCode: z.string().optional().or(z.literal("")),
@@ -69,7 +69,6 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
     }
   }, [open, clientToEdit, form]);
 
-  // 👇 Handler: When State changes, auto-fill State Code
   const handleStateChange = (stateName: string) => {
     form.setValue("state", stateName);
     const found = INDIAN_STATES.find(s => s.name === stateName);
@@ -78,6 +77,7 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
     }
   };
 
+  // 👇 Reverted to Simple Toast Logic
   const onSubmit = async (values: ClientFormValues) => {
     try {
       if (clientToEdit) {
@@ -179,7 +179,7 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
               </FormItem>
             )} />
 
-            {/* Pincode (Vital for E-Way Bill) */}
+            {/* Pincode */}
             <FormField control={form.control} name="pincode" render={({ field }) => (
               <FormItem>
                 <FormLabel>Pincode</FormLabel>
@@ -216,7 +216,7 @@ export function ClientForm({ open, onOpenChange, clientToEdit, onSuccess }: Clie
               </FormItem>
             )} />
 
-            {/* State Code (Auto-filled) */}
+            {/* State Code */}
             <FormField control={form.control} name="stateCode" render={({ field }) => (
               <FormItem>
                 <FormLabel>State Code</FormLabel>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-// 👇 Import useNavigate
 import { useNavigate } from "react-router-dom"; 
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Calendar, MapPin, Hash, Phone, Mail, Building2, FolderOpen } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Calendar, MapPin, Hash, Phone, Mail, Building2, FolderOpen, AlertTriangle} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -29,6 +28,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 // Services & Types
@@ -36,10 +37,8 @@ import { clientService } from "@/services/clientService";
 import type { Client } from "@/types";
 import { ClientForm } from "@/features/clients/ClientForm";
 
-// ❌ Removed ProjectManager import (we navigate to a new page now)
-
 export default function ClientPage() {
-  const navigate = useNavigate(); // 👈 Initialize Navigation
+  const navigate = useNavigate(); 
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -52,7 +51,8 @@ export default function ClientPage() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
-  // ❌ Removed ProjectManager State (isProjectManagerOpen, projectClient)
+  // 👇 Delete Confirmation State
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadClients = async () => {
     setLoading(true);
@@ -70,14 +70,25 @@ export default function ClientPage() {
     loadClients();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this client?")) return;
+  // 👇 Step 1: Open Dialog
+  const initiateDelete = (id: string) => {
+    setDeleteId(id);
+  };
+
+  // 👇 Step 2: Confirm Delete with Rich Toast
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await clientService.delete(id);
-      toast.success("Client deleted");
+      await clientService.delete(deleteId);
+      
+     
+      toast.success("Client Deleted");
+      
       loadClients();
     } catch (error) {
       toast.error("Failed to delete client");
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -96,12 +107,10 @@ export default function ClientPage() {
     setIsViewOpen(true);
   };
 
-  // 👇 UPDATED: Navigate to the Full Page View
   const handleManageProjects = (client: Client) => {
     navigate(`/files/${client.id}`);
   };
 
-  // Filter clients based on search
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
@@ -120,7 +129,6 @@ export default function ClientPage() {
         </Button>
       </div>
 
-      {/* Search Bar */}
       <div className="flex items-center gap-2 max-w-sm">
         <div className="relative w-full">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -186,7 +194,6 @@ export default function ClientPage() {
                           <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
 
-                        {/* 👇 UPDATED: Navigate to full page */}
                         <DropdownMenuItem onClick={() => handleManageProjects(client)}>
                             <FolderOpen className="mr-2 h-4 w-4" /> Documents & Projects
                         </DropdownMenuItem>
@@ -196,7 +203,9 @@ export default function ClientPage() {
                         <DropdownMenuItem onClick={() => handleEdit(client)}>
                           <Pencil className="mr-2 h-4 w-4" /> Edit Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-600">
+                        
+                        {/* 👇 UPDATED: Uses initiateDelete instead of handleDelete */}
+                        <DropdownMenuItem onClick={() => initiateDelete(client.id!)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete Client
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -216,7 +225,7 @@ export default function ClientPage() {
         onSuccess={loadClients}
       />
 
-      {/* CLIENT DETAILS VIEW DIALOG */}
+      {/* VIEW DETAILS DIALOG */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -276,6 +285,25 @@ export default function ClientPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 👇 DELETE CONFIRMATION DIALOG (Was missing in your snippet) */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" /> Confirm Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this client? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Delete Client</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

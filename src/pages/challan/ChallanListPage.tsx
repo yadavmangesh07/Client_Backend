@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// 👇 Added 'Download' icon
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download } from "lucide-react";
+// 👇 Added 'AlertTriangle'
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -9,7 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, // 👇 Added
+  DialogFooter       // 👇 Added
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +35,9 @@ export default function ChallanListPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // 👇 Delete Confirmation State
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   useEffect(() => {
     loadChallans();
   }, []);
@@ -41,15 +51,23 @@ export default function ChallanListPage() {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  // 👇 Step 1: Open Dialog (Replaces old handleDelete)
+  const initiateDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this challan?")) return;
+    setDeleteId(id);
+  };
+
+  // 👇 Step 2: Confirm Delete
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-        await challanService.delete(id);
+        await challanService.delete(deleteId);
         toast.success("Challan deleted");
         loadChallans();
     } catch (error) {
         toast.error("Failed to delete");
+    } finally {
+        setDeleteId(null);
     }
   };
 
@@ -58,15 +76,13 @@ export default function ChallanListPage() {
     navigate(`/challans/${id}/edit`);
   };
 
-  // 👇 NEW: Download Logic
   const handleDownload = async (e: React.MouseEvent, id: string, challanNo: string) => {
-    e.stopPropagation(); // Stop row click
+    e.stopPropagation(); 
     try {
       const blob = await challanService.downloadPdf(id);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      // Clean filename
       const safeName = challanNo.replace(/[^a-zA-Z0-9-_]/g, "_");
       link.setAttribute("download", `Challan_${safeName}.pdf`);
       document.body.appendChild(link);
@@ -160,7 +176,6 @@ export default function ChallanListPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         
-                        {/* 👇 DOWNLOAD OPTION */}
                         <DropdownMenuItem onClick={(e) => handleDownload(e, challan.id!, challan.challanNo)}>
                           <Download className="mr-2 h-4 w-4 text-blue-600" /> Download PDF
                         </DropdownMenuItem>
@@ -171,8 +186,9 @@ export default function ChallanListPage() {
                           <Pencil className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         
+                        {/* 👇 UPDATED to use initiateDelete */}
                         <DropdownMenuItem 
-                            onClick={(e) => handleDelete(e, challan.id!)}
+                            onClick={(e) => initiateDelete(e, challan.id!)}
                             className="text-red-600 focus:text-red-600 focus:bg-red-50"
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -187,6 +203,7 @@ export default function ChallanListPage() {
         </CardContent>
       </Card>
 
+      {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-[95vw] w-full h-[95vh] flex flex-col p-4">
           <DialogHeader className="mb-2">
@@ -199,6 +216,24 @@ export default function ChallanListPage() {
                  <div className="flex items-center justify-center h-full text-muted-foreground">Loading Preview...</div>
              )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 👇 Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-red-600">
+                    <AlertTriangle className="h-5 w-5" /> Confirm Deletion
+                </DialogTitle>
+                <DialogDescription>
+                    Are you sure you want to delete this challan? This action cannot be undone.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                <Button variant="destructive" onClick={confirmDelete}>Delete Challan</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,15 +1,27 @@
 import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-// 👇 Added 'UserCog' to imports
 import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen, Truck, UserCog } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { companyService } from "@/services/companyService"; 
 
+// 👇 Imports for the Dialog UI
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 export function MainLayout() {
   const location = useLocation();
-  
   const [brand, setBrand] = useState({ name: "JMD Decor", logo: "" });
+  
+  // 👇 State to control the logout popup
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -34,18 +46,20 @@ export function MainLayout() {
     { href: "/invoices", label: "Invoices", icon: FileText },
     { href: "/challans", label: "Delivery Challans", icon: Truck },
     { href: "/files", label: "Files & Folders", icon: FolderOpen },
-    
-    // 👇 NEW: My Account Tab (Separate from Settings)
     { href: "/account", label: "My Account", icon: UserCog },
-
     { label: "My Company", href: "/profile", icon: User },
     { label: "Settings", href: "/settings", icon: Settings }
   ];
 
-  const handleLogout = () => {
-    if (confirm("Are you sure you want to logout?")) {
-      authService.logout();
-    }
+  // 👇 1. Just open the dialog, don't logout yet
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
+  };
+
+  // 👇 2. Actual Logout function
+  const confirmLogout = () => {
+    authService.logout();
+    setShowLogoutDialog(false);
   };
 
   return (
@@ -75,7 +89,6 @@ export function MainLayout() {
         <nav className="flex-1 flex flex-col gap-4 px-2 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            // Check if current path matches
             const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
             
             return (
@@ -97,7 +110,7 @@ export function MainLayout() {
         {/* Logout Button */}
         <div className="border-t p-4">
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutClick} // 👈 Updated handler
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
@@ -112,6 +125,27 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* 👇 Logout Confirmation Dialog */}
+      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to log out of your account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowLogoutDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

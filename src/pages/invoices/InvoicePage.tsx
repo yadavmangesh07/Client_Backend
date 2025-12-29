@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Filter, X, MoreHorizontal, Eye, FileDown, Truck, Mail, Pencil, Trash2 } from "lucide-react";
+import { Plus, Filter, X, MoreHorizontal, Eye, FileDown, Truck, Mail, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -30,6 +30,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription, // Added
+  DialogFooter,      // Added
 } from "@/components/ui/dialog";
 
 // Services & Types
@@ -63,6 +65,9 @@ export default function InvoicePage() {
 
   const [emailDialogData, setEmailDialogData] = useState<{id: string, no: string, email: string} | null>(null);
 
+  // 👇 Delete Confirmation State
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   useEffect(() => {
     clientService.getAll().then(setClients).catch(console.error);
   }, []);
@@ -89,14 +94,22 @@ export default function InvoicePage() {
 
   useEffect(() => { loadInvoices(); }, [filterClient, filterStatus, sortOrder]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this invoice?")) return;
+  // 👇 1. Open Dialog
+  const initiateDelete = (id: string) => {
+    setDeleteId(id);
+  };
+
+  // 👇 2. Confirm Delete
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await invoiceService.delete(id);
+      await invoiceService.delete(deleteId);
       toast.success("Invoice deleted");
       loadInvoices();
     } catch (error) {
       toast.error("Failed to delete");
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -185,7 +198,6 @@ export default function InvoicePage() {
         <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mr-2">
             <Filter className="h-4 w-4" /> Filters:
         </div>
-        {/* Filters Code... (Unchanged) */}
         <div className="w-[200px]">
             <Select value={filterClient} onValueChange={setFilterClient}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="All Clients" /></SelectTrigger>
@@ -249,7 +261,6 @@ export default function InvoicePage() {
                 <TableRow 
                     key={inv.id}
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    // 👇 This opens the preview for the row
                     onClick={() => handleViewPdf(inv)}
                 >
                   <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
@@ -260,7 +271,6 @@ export default function InvoicePage() {
                   </TableCell>
                   <TableCell className="text-right font-bold">₹{inv.total.toFixed(2)}</TableCell>
                   
-                  {/* 👇 FIX: STOP PROPAGATION HERE */}
                   <TableCell 
                     className="text-right" 
                     onClick={(e) => e.stopPropagation()} 
@@ -300,7 +310,8 @@ export default function InvoicePage() {
                         <DropdownMenuItem onClick={() => handleEdit(inv)}>
                           <Pencil className="mr-2 h-4 w-4" /> Edit Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(inv.id)} className="text-red-600">
+                        {/* 👇 UPDATED: Use initiateDelete */}
+                        <DropdownMenuItem onClick={() => initiateDelete(inv.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete Invoice
                         </DropdownMenuItem>
 
@@ -355,6 +366,24 @@ export default function InvoicePage() {
             clientEmail={emailDialogData.email}
         />
       )}
+
+      {/* 👇 Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-red-600">
+                    <AlertTriangle className="h-5 w-5" /> Confirm Deletion
+                </DialogTitle>
+                <DialogDescription>
+                    Are you sure you want to delete this invoice? This action cannot be undone.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+                <Button variant="destructive" onClick={confirmDelete}>Delete Invoice</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
