@@ -66,29 +66,49 @@ export default function CompanyProfilePage() {
                      <Building2 className="h-10 w-10 text-gray-300" />
                    )}
                 </div>
-                {/* Status Badge (Optional) */}
+                {/* Status Badge */}
                 <Badge variant="secondary" className="mt-14">Active Business</Badge>
               </div>
               
               <div className="mt-4">
                 <h2 className="text-2xl font-bold">{profile.companyName || "Company Name Not Set"}</h2>
-                <div className="flex flex-col sm:flex-row gap-4 mt-2 text-gray-600 text-sm">
+                
+                {/* 👇 UPDATED: Contact Details Section */}
+                <div className="flex flex-col gap-2 mt-3 text-gray-600 text-sm">
+                   
+                   {/* Email Row */}
                    {profile.email && (
-                     <div className="flex items-center gap-1.5">
-                       <Mail className="h-4 w-4" /> {profile.email}
+                     <div className="flex items-center gap-2">
+                       <Mail className="h-4 w-4 text-blue-600 shrink-0" /> 
+                       <span>
+                         {profile.email}
+                         {profile.secondaryEmail && <span className="text-gray-400"> / {profile.secondaryEmail}</span>}
+                       </span>
                      </div>
                    )}
+
+                   {/* Phone Row */}
                    {profile.phone && (
-                     <div className="flex items-center gap-1.5">
-                       <Phone className="h-4 w-4" /> {profile.phone}
+                     <div className="flex items-center gap-2">
+                       <Phone className="h-4 w-4 text-green-600 shrink-0" /> 
+                       <span>
+                         {profile.phone}
+                         {profile.secondaryPhone && <span className="text-gray-400"> / {profile.secondaryPhone}</span>}
+                       </span>
                      </div>
                    )}
+
+                   {/* Website Row */}
                    {profile.website && (
-                     <div className="flex items-center gap-1.5">
-                       <Globe className="h-4 w-4" /> {profile.website}
+                     <div className="flex items-center gap-2">
+                       <Globe className="h-4 w-4 text-purple-600 shrink-0" /> 
+                       <a href={`https://${profile.website}`} target="_blank" rel="noreferrer" className="hover:underline">
+                         {profile.website}
+                       </a>
                      </div>
                    )}
                 </div>
+
               </div>
             </CardContent>
           </Card>

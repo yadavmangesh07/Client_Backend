@@ -93,6 +93,8 @@ export interface Company {
   email: string;
   website?: string;
   pincode?: string;
+  secondaryEmail?: string;
+  secondaryPhone?: string;
   
   // Tax
   gstin: string;

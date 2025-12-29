@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // 👇 REPLACE WITH YOUR CLOUDINARY DETAILS
-const CLOUDINARY_CLOUD_NAME = "df4uwisdy"; 
-const CLOUDINARY_PRESET = "billing_app_docs"; 
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET;
 
 interface ProjectDocument {
     fileId: string;

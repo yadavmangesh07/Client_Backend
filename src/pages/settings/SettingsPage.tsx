@@ -18,7 +18,7 @@ import { authService, type User } from "@/services/authService";
 
 import { PasswordConfirmDialog } from "@/components/common/PasswordConfirmDialog";
 
-// 1. Schema
+// 1. Schema - Updated with new fields
 const companySchema = z.object({
   id: z.string().optional().nullable(),
   companyName: z.string().min(1, "Company Name is required"),
@@ -26,6 +26,11 @@ const companySchema = z.object({
   pincode: z.string().min(6, "Valid 6-digit Pincode required").optional().or(z.literal("")).nullable(),
   phone: z.string().optional().or(z.literal("")).nullable(),
   email: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
+  
+  // 👇 NEW FIELDS
+  secondaryEmail: z.string().email("Invalid email").optional().or(z.literal("")).nullable(),
+  secondaryPhone: z.string().optional().or(z.literal("")).nullable(),
+
   website: z.string().optional().or(z.literal("")).nullable(),
   gstin: z.string().optional().or(z.literal("")).nullable(),
   udyamRegNo: z.string().optional().or(z.literal("")).nullable(),
@@ -57,8 +62,9 @@ export default function SettingsPage() {
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
     defaultValues: {
-      companyName: "", address: "", pincode: "", phone: "", email: "", website: "",
-      gstin: "", udyamRegNo: "", bankName: "", accountName: "", accountNumber: "", 
+      companyName: "", address: "", pincode: "", phone: "", email: "", 
+      secondaryEmail: "", secondaryPhone: "", // 👈 Added defaults
+      website: "", gstin: "", udyamRegNo: "", bankName: "", accountName: "", accountNumber: "", 
       ifscCode: "", branch: "", logoUrl: "", signatureUrl: ""
     }
   });
@@ -83,6 +89,11 @@ export default function SettingsPage() {
            pincode: data.pincode || "", 
            phone: data.phone || "",
            email: data.email || "",
+           
+           // 👇 Load new data
+           secondaryEmail: data.secondaryEmail || "",
+           secondaryPhone: data.secondaryPhone || "",
+
            website: data.website || "",
            gstin: data.gstin || "",
            udyamRegNo: data.udyamRegNo || "",
@@ -190,12 +201,12 @@ export default function SettingsPage() {
                     <FormField control={form.control} name="companyName" render={({ field }) => (
                       <FormItem className="col-span-2">
                         <FormLabel>Company Name</FormLabel>
-                        {/* 👇 Added disabled={!isAdmin} to all inputs */}
                         <FormControl><Input disabled={!isAdmin} placeholder="JMD Décor" {...field} value={field.value || ""} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
 
+                    {/* Primary Contact Row */}
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
@@ -208,6 +219,22 @@ export default function SettingsPage() {
                       <FormItem>
                         <FormLabel>Phone</FormLabel>
                         <FormControl><Input disabled={!isAdmin} placeholder="+91 9876543210" {...field} value={field.value || ""} /></FormControl>
+                      </FormItem>
+                    )} />
+
+                    {/* 👇 NEW: Secondary Contact Row */}
+                    <FormField control={form.control} name="secondaryEmail" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Secondary Email (Optional)</FormLabel>
+                        <FormControl><Input disabled={!isAdmin} placeholder="alt@jmd.com" {...field} value={field.value || ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="secondaryPhone" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Secondary Phone (Optional)</FormLabel>
+                        <FormControl><Input disabled={!isAdmin} placeholder="+91 98..." {...field} value={field.value || ""} /></FormControl>
                       </FormItem>
                     )} />
                     
@@ -254,7 +281,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   
-                  {/* 👇 Only show Save button if ADMIN */}
                   {isAdmin && (
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={isLoading}>
@@ -310,7 +336,6 @@ export default function SettingsPage() {
                     )} />
                   </div>
                   
-                  {/* 👇 Only show Save button if ADMIN */}
                   {isAdmin && (
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={isLoading}>
@@ -383,7 +408,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* 👇 Only show Save button if ADMIN */}
                   {isAdmin && (
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={isLoading}>
@@ -395,7 +419,7 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
-            {/* --- TAB 4: TEAM ACCESS (ADMIN ONLY - HIDDEN FOR USERS) --- */}
+            {/* --- TAB 4: TEAM ACCESS (ADMIN ONLY) --- */}
             {isAdmin && (
               <TabsContent value="team">
                 <Card>
