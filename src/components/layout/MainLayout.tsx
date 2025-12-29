@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { companyService } from "@/services/companyService"; 
 
-// 👇 Imports for the Dialog UI
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,11 +15,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// 👇 1. Import the ModeToggle component
+import { ModeToggle } from "@/components/mode-toggle";
+
 export function MainLayout() {
   const location = useLocation();
   const [brand, setBrand] = useState({ name: "JMD Decor", logo: "" });
   
-  // 👇 State to control the logout popup
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
@@ -51,12 +52,10 @@ export function MainLayout() {
     { label: "Settings", href: "/settings", icon: Settings }
   ];
 
-  // 👇 1. Just open the dialog, don't logout yet
   const handleLogoutClick = () => {
     setShowLogoutDialog(true);
   };
 
-  // 👇 2. Actual Logout function
   const confirmLogout = () => {
     authService.logout();
     setShowLogoutDialog(false);
@@ -107,15 +106,20 @@ export function MainLayout() {
           })}
         </nav>
 
-        {/* Logout Button */}
-        <div className="border-t p-4">
+        {/* Footer: Logout & Theme Toggle */}
+        <div className="border-t p-4 flex items-center gap-2">
+          
+          {/* Logout Button (Takes available space) */}
           <button
-            onClick={handleLogoutClick} // 👈 Updated handler
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
+            onClick={handleLogoutClick}
+            className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
             Logout
           </button>
+
+          {/* 👇 2. Insert the ModeToggle Button */}
+          <ModeToggle />
         </div>
       </aside>
 
@@ -126,7 +130,7 @@ export function MainLayout() {
         </main>
       </div>
 
-      {/* 👇 Logout Confirmation Dialog */}
+      {/* Logout Confirmation Dialog */}
       <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <DialogContent>
           <DialogHeader>
