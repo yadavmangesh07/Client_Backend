@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { MainLayout } from "@/components/layout/MainLayout"; 
+import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
 import CompanyProfilePage from "@/pages/profile/CompanyProfilePage";
@@ -17,6 +17,10 @@ import ClientProjectsPage from "./pages/projects/ClientProjectsPage";
 import ChallanListPage from "./pages/challan/ChallanListPage";
 import ChallanFormPage from "./pages/challan/ChallanFormPage";
 import MyAccountPage from "./pages/settings/MyAccountPage";
+import WCCListPage from "./pages/wcc/WCCListPage";
+
+// 👇 FIX THIS IMPORT
+import WCCFormPage from "./pages/wcc/WCCFormPage"; 
 
 function App() {
   return (
@@ -29,9 +33,9 @@ function App() {
         {/* 🔒 Protected Routes (Everything inside here requires login) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-             {/* Redirect root to dashboard */}
+            {/* Redirect root to dashboard */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
+
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientPage />} />
             <Route path="/invoices" element={<InvoicePage />} />
@@ -42,6 +46,12 @@ function App() {
             <Route path="/challans" element={<ChallanListPage />} />
             <Route path="/challans/new" element={<ChallanFormPage />} />
             <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
+            
+            {/* WCC Routes */}
+            <Route path="/wcc" element={<WCCListPage />} />
+            <Route path="/wcc/new" element={<WCCFormPage />} />
+            <Route path="/wcc/:id/edit" element={<WCCFormPage />} />
+            
             <Route path="/account" element={<MyAccountPage />} />
           </Route>
         </Route>

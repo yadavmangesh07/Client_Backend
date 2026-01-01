@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen, Truck, UserCog } from "lucide-react"; 
+// 👇 Added 'FileCheck' icon
+import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen, Truck, UserCog, FileCheck } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { companyService } from "@/services/companyService"; 
@@ -15,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// 👇 1. Import the ModeToggle component
 import { ModeToggle } from "@/components/mode-toggle";
 
 export function MainLayout() {
@@ -46,6 +46,10 @@ export function MainLayout() {
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
     { href: "/challans", label: "Delivery Challans", icon: Truck },
+    
+    // 👇 NEW: Work Completion Certificates Tab
+    { href: "/wcc", label: "Work Certificates", icon: FileCheck },
+
     { href: "/files", label: "Files & Folders", icon: FolderOpen },
     { href: "/account", label: "My Account", icon: UserCog },
     { label: "My Company", href: "/profile", icon: User },
@@ -109,7 +113,6 @@ export function MainLayout() {
         {/* Footer: Logout & Theme Toggle */}
         <div className="border-t p-4 flex items-center gap-2">
           
-          {/* Logout Button (Takes available space) */}
           <button
             onClick={handleLogoutClick}
             className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
@@ -118,7 +121,6 @@ export function MainLayout() {
             Logout
           </button>
 
-          {/* 👇 2. Insert the ModeToggle Button */}
           <ModeToggle />
         </div>
       </aside>
