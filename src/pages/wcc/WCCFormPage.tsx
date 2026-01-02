@@ -1,16 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { useForm, useFieldArray, Controller } from "react-hook-form"; // 👈 Added Controller
+import { ArrowLeft, Plus, Trash2, Loader2, CalendarIcon } from "lucide-react"; // 👈 Added CalendarIcon
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, parse } from "date-fns"; // 👈 Added parse
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-//import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils"; // 👈 Standard utility for conditional classes
+
+// 👇 Ensure you have these components. If not, run: npx shadcn-ui@latest add calendar popover
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { wccService } from "@/services/wccService";
 import type { WCCData } from "@/types/wccTypes";
@@ -41,7 +49,6 @@ export default function WCCFormPage() {
       setLoading(true);
       wccService.getById(id!)
         .then((data) => {
-           // Ensure items exist
            if(!data.items || data.items.length === 0) {
                data.items = [{ srNo: 1, activity: "", qty: "" }];
            }
@@ -55,7 +62,7 @@ export default function WCCFormPage() {
     }
   }, [id, isEditMode, navigate, reset]);
 
-  // Sync Client Name with Store Name if client is empty (Optional helper)
+  // Sync Client Name with Store Name if client is empty
   const storeName = watch("storeName");
   useEffect(() => {
       if (!isEditMode && storeName) {
@@ -115,7 +122,16 @@ export default function WCCFormPage() {
 
             <div className="space-y-2">
                 <Label>Ref No.</Label>
-                <Input placeholder="e.g. JMD/2024-25/86" {...register("refNo", { required: true })} />
+                <Input 
+                    placeholder={isEditMode ? "e.g. JMD/2024-25/86" : "(Auto-generated on save)"} 
+                    {...register("refNo")} 
+                    disabled={!isEditMode} 
+                />
+                {!isEditMode && (
+                    <p className="text-xs text-muted-foreground">
+                        Will be generated automatically (e.g., JMD/2025-26/1)
+                    </p>
+                )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -123,9 +139,45 @@ export default function WCCFormPage() {
                 <Textarea placeholder="Shop Address..." {...register("projectLocation", { required: true })} />
             </div>
 
+            {/* 👇 UPDATED: Date Picker for Certificate Date */}
             <div className="space-y-2">
                 <Label>Certificate Date</Label>
-                <Input placeholder="DD-MM-YYYY" {...register("certificateDate")} />
+                <Controller
+                  control={control}
+                  name="certificateDate"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            field.value
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          // Convert string "DD-MM-YYYY" back to Date object for the calendar
+                          selected={field.value ? parse(field.value, "dd-MM-yyyy", new Date()) : undefined}
+                          onSelect={(date) => {
+                            // Convert selected Date object back to "DD-MM-YYYY" string for the form
+                            if (date) field.onChange(format(date, "dd-MM-yyyy"));
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
             </div>
 
             <div className="space-y-2">
@@ -138,12 +190,45 @@ export default function WCCFormPage() {
                 <Input placeholder="e.g. 22330" {...register("poNo")} />
             </div>
 
+            {/* 👇 UPDATED: Date Picker for PO Date */}
             <div className="space-y-2">
                 <Label>PO Date</Label>
-                <Input placeholder="DD-MM-YYYY" {...register("poDate")} />
+                <Controller
+                  control={control}
+                  name="poDate"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            field.value
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? parse(field.value, "dd-MM-yyyy", new Date()) : undefined}
+                          onSelect={(date) => {
+                            if (date) field.onChange(format(date, "dd-MM-yyyy"));
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
             </div>
             
-            {/* Hidden fields for footer names (defaults) */}
             <input type="hidden" {...register("companyName")} />
             <input type="hidden" {...register("clientName")} />
 

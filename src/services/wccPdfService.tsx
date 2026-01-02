@@ -7,8 +7,9 @@ export const generateWCCPdf = (data: WCCData) => {
   
   // --- CONSTANTS ---
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
   const margin = 15;
-  const contentWidth = pageWidth - (margin * 2);
+  const contentWidth = pageWidth - (margin * 2); // Usually 180mm for A4
 
   // --- 1. TITLE ---
   doc.setFontSize(16);
@@ -21,23 +22,32 @@ export const generateWCCPdf = (data: WCCData) => {
   doc.line((pageWidth / 2) - (textWidth / 2), 17, (pageWidth / 2) + (textWidth / 2), 17);
 
   // --- 2. HEADER GRID ---
+  // Define fixed widths for label columns
+  const col0Width = 25; // Store Name Label
+  const col2Width = 25; // Ref No Label
+  const col3Width = 35; // Ref No Value
+  // Calculate dynamic width for the main content column to fill the page perfectly
+  const col1Width = contentWidth - col0Width - col2Width - col3Width;
+
   autoTable(doc, {
     startY: 20,
     theme: 'plain', 
     styles: {
-      lineColor: 0, // Black
+      lineColor: 0, 
       lineWidth: 0.2,
-      textColor: 0, // Black
+      textColor: 0,
       fontSize: 9,
       font: "helvetica",
       cellPadding: 1.5,
       valign: 'middle',
     },
+    // Force the table to use the full calculated content width
+    tableWidth: contentWidth, 
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 25 }, 
-      1: { cellWidth: 100 }, 
-      2: { fontStyle: 'bold', cellWidth: 20 }, 
-      3: { cellWidth: 30 }
+      0: { fontStyle: 'bold', cellWidth: col0Width }, 
+      1: { cellWidth: col1Width }, // Dynamic width to ensure alignment
+      2: { fontStyle: 'bold', cellWidth: col2Width }, 
+      3: { cellWidth: col3Width }
     },
     body: [
       [
@@ -65,7 +75,6 @@ export const generateWCCPdf = (data: WCCData) => {
         { content: data.gstin, colSpan: 3 }
       ]
     ],
-    // 👇 FIXED: Added type 'any' to data parameter
     didParseCell: function(data: any) {
         data.cell.styles.lineWidth = 0.2;
         data.cell.styles.lineColor = 0;
@@ -77,6 +86,8 @@ export const generateWCCPdf = (data: WCCData) => {
 
   autoTable(doc, {
     startY: finalY, 
+    // Ensure this table also respects the exact content width
+    tableWidth: contentWidth,
     head: [['Sr. No.', 'Activity', 'Qty- Sq.Ft/Nos.']],
     body: data.items.map(item => [
       item.srNo,
@@ -100,10 +111,9 @@ export const generateWCCPdf = (data: WCCData) => {
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 15 },
-      1: { halign: 'left' }, 
+      1: { halign: 'left' }, // Auto width fills remaining space
       2: { halign: 'center', cellWidth: 30 } 
     },
-    // 👇 FIXED: Added type 'any' to data parameter
     didParseCell: function(data: any) {
         data.cell.styles.lineWidth = 0.2;
         data.cell.styles.lineColor = 0;
@@ -150,18 +160,22 @@ export const generateWCCPdf = (data: WCCData) => {
   const rightX = pageWidth - margin;
   doc.text("VENDOR SIGN & STAMP", rightX, footerY, { align: "right" });
 
-  doc.setFont("times", "italic");
-  doc.setFontSize(20);
-  doc.text("Jmd Decor", rightX - 20, footerY + 15, { align: "center" }); 
-
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   
-  doc.text(data.clientName, margin, footerY + 30);
-  doc.text(data.companyName, rightX, footerY + 30, { align: "right" });
+  doc.text(data.clientName || "", margin, footerY + 30);
+  doc.text(data.companyName || "", rightX, footerY + 30, { align: "right" });
+
+  // --- 6. PAGE BORDER ---
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(0);
+    doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
+  }
 
   // --- SAVE ---
-  // Using a sanitized filename
   const safeRef = data.refNo ? data.refNo.replace(/[^a-zA-Z0-9]/g, "_") : "WCC";
   return doc.output("blob");
 };
