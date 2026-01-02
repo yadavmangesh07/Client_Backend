@@ -64,6 +64,12 @@ export interface Invoice {
   attachments?: Attachment[];
   createdAt: string;
   updatedAt?: string;
+
+  client?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
 }
 
 export interface PageResponse<T> {
