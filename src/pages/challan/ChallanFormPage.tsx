@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom"; // Added useParams
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-//import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Using shadcn select if available, or HTML select
 
 import { challanService, type Challan } from "@/services/challanService";
 import { clientService } from "@/services/clientService";
@@ -32,7 +31,7 @@ const INDIAN_STATES = [
 
 export default function ChallanFormPage() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Check for ID
+  const { id } = useParams();
   const isEditMode = !!id;
 
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +39,8 @@ export default function ChallanFormPage() {
 
   const form = useForm<Challan>({
     defaultValues: {
-      challanNo: `JMD/${new Date().getFullYear()}-${(new Date().getFullYear()+1).toString().slice(-2)}/001`,
+      // 👇 FIXED: Set to empty so Backend generates it. Do not guess here!
+      challanNo: "", 
       challanDate: format(new Date(), "yyyy-MM-dd"),
       orderNo: "",
       orderDate: format(new Date(), "yyyy-MM-dd"),
@@ -59,21 +59,18 @@ export default function ChallanFormPage() {
     name: "items"
   });
 
-  // Load Initial Data (Clients & Existing Challan if Edit)
+  // Load Initial Data
   useEffect(() => {
     const init = async () => {
-        // 1. Load Clients
         try {
             const data: any = await clientService.getAll();
             if (Array.isArray(data)) setClients(data);
             else if (data?.content) setClients(data.content);
         } catch (e) { console.error("Failed loading clients"); }
 
-        // 2. If Edit Mode, Load Challan
         if (isEditMode) {
             try {
-                const challan = await challanService.getById(id);
-                // Fix Date Formats for Input type="date"
+                const challan = await challanService.getById(id!); // Added ! for strict null check
                 const formatted = {
                     ...challan,
                     challanDate: challan.challanDate ? format(new Date(challan.challanDate), "yyyy-MM-dd") : "",
@@ -101,7 +98,6 @@ export default function ChallanFormPage() {
       }
   };
 
-  // 👇 NEW: Handle State Change to Auto-fill Code
   const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const selectedName = e.target.value;
       const found = INDIAN_STATES.find(s => s.name === selectedName);
@@ -121,7 +117,7 @@ export default function ChallanFormPage() {
       };
       
       if (isEditMode) {
-          await challanService.update(id, payload);
+          await challanService.update(id!, payload);
           toast.success("Challan updated successfully!");
       } else {
           await challanService.create(payload);
@@ -156,9 +152,22 @@ export default function ChallanFormPage() {
           <Card>
             <CardHeader><CardTitle>Challan Details</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
+               {/* 👇 FIXED: Input is disabled for new entries and shows placeholder */}
                <FormField control={form.control} name="challanNo" render={({ field }) => (
-                 <FormItem><FormLabel>Challan No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+                 <FormItem>
+                    <FormLabel>Challan No</FormLabel>
+                    <FormControl>
+                        <Input 
+                            {...field} 
+                            placeholder={isEditMode ? "Challan No" : "(Auto-generated on save)"}
+                            disabled={!isEditMode} 
+                        />
+                    </FormControl>
+                    {!isEditMode && <p className="text-xs text-muted-foreground">Will be generated automatically</p>}
+                    <FormMessage/>
+                 </FormItem>
                )} />
+               
                <FormField control={form.control} name="challanDate" render={({ field }) => (
                  <FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage/></FormItem>
                )} />
@@ -193,7 +202,6 @@ export default function ChallanFormPage() {
                     <FormItem className="col-span-2"><FormLabel>Address</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                   )} />
 
-                  {/* 👇 SMART STATE DROPDOWN */}
                   <FormField control={form.control} name="clientState" render={({ field }) => (
                     <FormItem>
                         <FormLabel>State</FormLabel>
@@ -202,8 +210,8 @@ export default function ChallanFormPage() {
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 {...field}
                                 onChange={(e) => {
-                                    field.onChange(e); // Update Form State
-                                    handleStateChange(e); // Update Code automatically
+                                    field.onChange(e); 
+                                    handleStateChange(e);
                                 }}
                             >
                                 <option value="" disabled>Select State</option>
@@ -217,7 +225,6 @@ export default function ChallanFormPage() {
                     </FormItem>
                   )} />
 
-                  {/* READ ONLY CODE (Populated automatically) */}
                   <FormField control={form.control} name="clientStateCode" render={({ field }) => (
                     <FormItem>
                         <FormLabel>State Code</FormLabel>

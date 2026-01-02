@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; 
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Calendar, MapPin, Hash, Phone, Mail, Building2, FolderOpen, AlertTriangle} from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -32,7 +32,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// Services & Types
 import { clientService } from "@/services/clientService";
 import type { Client } from "@/types";
 import { ClientForm } from "@/features/clients/ClientForm";
@@ -43,15 +42,8 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   
-  // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-
-  // View Details State
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [viewingClient, setViewingClient] = useState<Client | null>(null);
-
-  // 👇 Delete Confirmation State
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadClients = async () => {
@@ -70,20 +62,16 @@ export default function ClientPage() {
     loadClients();
   }, []);
 
-  // 👇 Step 1: Open Dialog
-  const initiateDelete = (id: string) => {
+  const initiateDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
     setDeleteId(id);
   };
 
-  // 👇 Step 2: Confirm Delete with Rich Toast
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
       await clientService.delete(deleteId);
-      
-     
       toast.success("Client Deleted");
-      
       loadClients();
     } catch (error) {
       toast.error("Failed to delete client");
@@ -97,18 +85,14 @@ export default function ClientPage() {
     setIsFormOpen(true);
   };
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
     setEditingClient(client);
     setIsFormOpen(true);
   };
 
-  const handleView = (client: Client) => {
-    setViewingClient(client);
-    setIsViewOpen(true);
-  };
-
-  const handleManageProjects = (client: Client) => {
-    navigate(`/files/${client.id}`);
+  const handleRowClick = (client: Client) => {
+    navigate(`/clients/${client.id}/profile`);
   };
 
   const filteredClients = clients.filter(c => 
@@ -158,14 +142,21 @@ export default function ClientPage() {
                <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No clients found.</TableCell></TableRow>
             ) : (
               filteredClients.map((client) => (
-                <TableRow key={client.id}>
+                // 👇 UPDATED: Row is now clickable
+                <TableRow 
+                    key={client.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleRowClick(client)}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
                             {client.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-semibold text-gray-900">{client.name}</span>
+                            <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                {client.name}
+                            </span>
                             <span className="text-xs text-gray-500">{client.phone || client.email || "No contact info"}</span>
                         </div>
                     </div>
@@ -182,7 +173,8 @@ export default function ClientPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        {/* 👇 UPDATED: Stop Propagation to prevent row click */}
+                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -190,22 +182,15 @@ export default function ClientPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         
-                        <DropdownMenuItem onClick={() => handleView(client)}>
-                          <Eye className="mr-2 h-4 w-4" /> View Details
-                        </DropdownMenuItem>
+                        {/* Removed View Profile & Documents (Redundant) */}
 
-                        <DropdownMenuItem onClick={() => handleManageProjects(client)}>
-                            <FolderOpen className="mr-2 h-4 w-4" /> Documents & Projects
+                        <DropdownMenuItem onClick={(e) => handleEdit(client, e)}>
+                          <Pencil className="mr-2 h-4 w-4" /> Edit Details
                         </DropdownMenuItem>
                         
                         <DropdownMenuSeparator />
                         
-                        <DropdownMenuItem onClick={() => handleEdit(client)}>
-                          <Pencil className="mr-2 h-4 w-4" /> Edit Details
-                        </DropdownMenuItem>
-                        
-                        {/* 👇 UPDATED: Uses initiateDelete instead of handleDelete */}
-                        <DropdownMenuItem onClick={() => initiateDelete(client.id!)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                        <DropdownMenuItem onClick={(e) => initiateDelete(client.id!, e)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete Client
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -225,68 +210,6 @@ export default function ClientPage() {
         onSuccess={loadClients}
       />
 
-      {/* VIEW DETAILS DIALOG */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                    {viewingClient?.name.substring(0, 2).toUpperCase()}
-                </div>
-                {viewingClient?.name}
-            </DialogTitle>
-          </DialogHeader>
-
-          {viewingClient && (
-            <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3"/> Phone</span>
-                        <p className="text-sm font-medium">{viewingClient.phone || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Mail className="h-3 w-3"/> Email</span>
-                        <p className="text-sm font-medium truncate">{viewingClient.email || "-"}</p>
-                    </div>
-                </div>
-
-                <div className="space-y-1 bg-gray-50 p-3 rounded-md">
-                     <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Building2 className="h-3 w-3"/> GSTIN</span>
-                     <p className="text-sm font-mono tracking-wide">{viewingClient.gstin || "Unregistered"}</p>
-                </div>
-
-                <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><MapPin className="h-3 w-3"/> Billing Address</span>
-                    <p className="text-sm leading-relaxed text-gray-700">{viewingClient.address || "-"}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-500">State</span>
-                        <p className="text-sm">{viewingClient.state || "-"}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-500 flex items-center gap-1"><Hash className="h-3 w-3"/> Pincode</span>
-                        <p className="text-sm">{viewingClient.pincode || "-"}</p>
-                    </div>
-                </div>
-
-                <div className="border-t pt-3 mt-2 grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Calendar className="h-3 w-3"/> Added On</span>
-                        <p className="text-xs text-gray-500">{viewingClient.createdAt ? format(new Date(viewingClient.createdAt), 'PPpp') : '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Calendar className="h-3 w-3"/> Last Updated</span>
-                        <p className="text-xs text-gray-500">{viewingClient.updatedAt ? format(new Date(viewingClient.updatedAt), 'PPpp') : '-'}</p>
-                    </div>
-                </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* 👇 DELETE CONFIRMATION DIALOG (Was missing in your snippet) */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -303,7 +226,6 @@ export default function ClientPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

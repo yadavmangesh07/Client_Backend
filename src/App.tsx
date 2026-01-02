@@ -21,6 +21,7 @@ import WCCListPage from "./pages/wcc/WCCListPage";
 
 // 👇 FIX THIS IMPORT
 import WCCFormPage from "./pages/wcc/WCCFormPage"; 
+import ClientProfilePage from "./pages/Clients/ClientProfilePage";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Route path="/profile" element={<CompanyProfilePage />} />
             <Route path="/files" element={<FilesPage />} />
             <Route path="/files/:clientId" element={<ClientProjectsPage />} />
+            <Route path="/clients/:id/profile" element={<ClientProfilePage />} />
             <Route path="/challans" element={<ChallanListPage />} />
             <Route path="/challans/new" element={<ChallanFormPage />} />
             <Route path="/challans/:id/edit" element={<ChallanFormPage />} />

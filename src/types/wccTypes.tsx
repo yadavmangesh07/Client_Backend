@@ -11,9 +11,10 @@ export interface WCCData {
   projectLocation: string;
   certificateDate: string;
   poNo: string;
-  poDate: string;
+  poDate?: string;
   gstin: string;
   items: WCCItem[];
   companyName: string; 
-  clientName: string; 
+  clientName: string;
+  clientId?: string;
 }

@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm, useFieldArray, Controller } from "react-hook-form"; // 👈 Added Controller
-import { ArrowLeft, Plus, Trash2, Loader2, CalendarIcon } from "lucide-react"; // 👈 Added CalendarIcon
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { ArrowLeft, Plus, Trash2, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format, parse } from "date-fns"; // 👈 Added parse
+import { format, parse } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils"; // 👈 Standard utility for conditional classes
+import { cn } from "@/lib/utils";
 
-// 👇 Ensure you have these components. If not, run: npx shadcn-ui@latest add calendar popover
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/popover";
 
 import { wccService } from "@/services/wccService";
+import { clientService } from "@/services/clientService";
 import type { WCCData } from "@/types/wccTypes";
 
 export default function WCCFormPage() {
@@ -28,13 +28,15 @@ export default function WCCFormPage() {
   const { id } = useParams();
   const isEditMode = !!id;
   const [loading, setLoading] = useState(false);
+  
+  const [clients, setClients] = useState<any[]>([]);
 
-  // React Hook Form Setup
   const { register, control, handleSubmit, reset, setValue, watch } = useForm<WCCData>({
     defaultValues: {
       certificateDate: format(new Date(), "dd-MM-yyyy"),
       items: [{ srNo: 1, activity: "", qty: "" }],
-      companyName: "JMD DECOR"
+      companyName: "JMD DECOR",
+      clientId: "" 
     }
   });
 
@@ -43,26 +45,47 @@ export default function WCCFormPage() {
     name: "items"
   });
 
-  // Load data if editing
   useEffect(() => {
-    if (isEditMode) {
-      setLoading(true);
-      wccService.getById(id!)
-        .then((data) => {
-           if(!data.items || data.items.length === 0) {
-               data.items = [{ srNo: 1, activity: "", qty: "" }];
-           }
-           reset(data);
-        })
-        .catch(() => {
-            toast.error("Failed to load certificate details");
-            navigate("/wcc");
-        })
-        .finally(() => setLoading(false));
-    }
+    const init = async () => {
+        setLoading(true);
+        try {
+            const clientData: any = await clientService.getAll();
+            if (Array.isArray(clientData)) setClients(clientData);
+            else if (clientData?.content) setClients(clientData.content);
+
+            if (isEditMode) {
+                const data = await wccService.getById(id!);
+                if(!data.items || data.items.length === 0) {
+                    data.items = [{ srNo: 1, activity: "", qty: "" }];
+                }
+                // Ensure date is formatted for the UI if coming from backend
+                // (Optional safety, depending on how your backend returns it)
+                reset(data); 
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to load data");
+            if (isEditMode) navigate("/wcc");
+        } finally {
+            setLoading(false);
+        }
+    };
+    init();
   }, [id, isEditMode, navigate, reset]);
 
-  // Sync Client Name with Store Name if client is empty
+  const handleClientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const selectedId = e.target.value;
+      const client = clients.find(c => c.id === selectedId);
+      
+      if (client) {
+          setValue("clientId", client.id);
+          setValue("storeName", client.name);
+          setValue("clientName", client.name);
+          setValue("projectLocation", client.address || "");
+          setValue("gstin", client.gstin || "");
+      }
+  };
+
   const storeName = watch("storeName");
   useEffect(() => {
       if (!isEditMode && storeName) {
@@ -70,18 +93,29 @@ export default function WCCFormPage() {
       }
   }, [storeName, isEditMode, setValue]);
 
+  // 👇 UPDATED: Convert Form Date (dd-MM-yyyy) to ISO Date (YYYY-MM-DD...) for Backend
   const onSubmit = async (data: WCCData) => {
     try {
       setLoading(true);
+      
+      const payload = {
+          ...data,
+          // Parse "02-01-2026" -> Date Object -> ISO String
+          certificateDate: parse(data.certificateDate, "dd-MM-yyyy", new Date()).toISOString(),
+          // Handle PO Date similarly if it exists
+          poDate: data.poDate ? parse(data.poDate, "dd-MM-yyyy", new Date()).toISOString() : undefined
+      };
+
       if (isEditMode) {
-        await wccService.update(id!, data);
+        await wccService.update(id!, payload);
         toast.success("Certificate updated successfully");
       } else {
-        await wccService.create(data);
+        await wccService.create(payload);
         toast.success("Certificate created successfully");
       }
       navigate("/wcc");
     } catch (error) {
+      console.error(error);
       toast.error(isEditMode ? "Failed to update" : "Failed to create");
     } finally {
       setLoading(false);
@@ -90,8 +124,6 @@ export default function WCCFormPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
-      
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" onClick={() => navigate("/wcc")}>
           <ArrowLeft className="h-4 w-4" />
@@ -107,14 +139,30 @@ export default function WCCFormPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        
-        {/* Basic Info Card */}
         <Card>
           <CardHeader>
             <CardTitle>Project Details</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
             
+            <div className="space-y-2 md:col-span-2">
+                <Label>Select Client (Optional)</Label>
+                <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    onChange={handleClientSelect}
+                    defaultValue=""
+                >
+                    <option value="" disabled>Select Existing Client to Auto-fill...</option>
+                    {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                    Selecting a client will link this certificate to their profile automatically.
+                </p>
+            </div>
+            <input type="hidden" {...register("clientId")} />
+
             <div className="space-y-2">
                 <Label>Store Name (Client)</Label>
                 <Input placeholder="e.g. DUA LIMA RETAIL..." {...register("storeName", { required: true })} />
@@ -139,7 +187,6 @@ export default function WCCFormPage() {
                 <Textarea placeholder="Shop Address..." {...register("projectLocation", { required: true })} />
             </div>
 
-            {/* 👇 UPDATED: Date Picker for Certificate Date */}
             <div className="space-y-2">
                 <Label>Certificate Date</Label>
                 <Controller
@@ -155,21 +202,15 @@ export default function WCCFormPage() {
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          {field.value ? (
-                            field.value
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
+                          {field.value ? field.value : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          // Convert string "DD-MM-YYYY" back to Date object for the calendar
                           selected={field.value ? parse(field.value, "dd-MM-yyyy", new Date()) : undefined}
                           onSelect={(date) => {
-                            // Convert selected Date object back to "DD-MM-YYYY" string for the form
                             if (date) field.onChange(format(date, "dd-MM-yyyy"));
                           }}
                           initialFocus
@@ -190,7 +231,6 @@ export default function WCCFormPage() {
                 <Input placeholder="e.g. 22330" {...register("poNo")} />
             </div>
 
-            {/* 👇 UPDATED: Date Picker for PO Date */}
             <div className="space-y-2">
                 <Label>PO Date</Label>
                 <Controller
@@ -206,11 +246,7 @@ export default function WCCFormPage() {
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          {field.value ? (
-                            field.value
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
+                          {field.value ? field.value : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -235,7 +271,6 @@ export default function WCCFormPage() {
           </CardContent>
         </Card>
 
-        {/* Items Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Work Items</CardTitle>
