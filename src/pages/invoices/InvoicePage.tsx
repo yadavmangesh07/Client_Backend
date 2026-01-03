@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Filter, X, MoreHorizontal, Eye, FileDown, Truck, Mail, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils"; // 👈 Import cn for badge styles
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription, // Added
-  DialogFooter,      // Added
+  DialogDescription, 
+  DialogFooter,      
 } from "@/components/ui/dialog";
 
 // Services & Types
@@ -64,12 +65,14 @@ export default function InvoicePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [emailDialogData, setEmailDialogData] = useState<{id: string, no: string, email: string} | null>(null);
-
-  // 👇 Delete Confirmation State
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    clientService.getAll().then(setClients).catch(console.error);
+    clientService.getAll().then((res: any) => {
+        // Handle pagination vs array check if needed
+        if (Array.isArray(res)) setClients(res);
+        else if (res?.content) setClients(res.content);
+    }).catch(console.error);
   }, []);
 
   const loadInvoices = async () => {
@@ -94,12 +97,10 @@ export default function InvoicePage() {
 
   useEffect(() => { loadInvoices(); }, [filterClient, filterStatus, sortOrder]);
 
-  // 👇 1. Open Dialog
   const initiateDelete = (id: string) => {
     setDeleteId(id);
   };
 
-  // 👇 2. Confirm Delete
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
@@ -181,6 +182,22 @@ export default function InvoicePage() {
     setSortOrder("desc");
   };
 
+  // 👇 HELPER: Same Badge Style Logic as Dashboard
+  const getStatusStyle = (status: string | undefined) => {
+    const s = (status || "").toUpperCase();
+    switch (s) {
+      case "PAID":
+        return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200"; // Green
+      case "PENDING":
+      case "UNPAID": 
+      case "OVERDUE":
+        return "bg-red-100 text-red-700 hover:bg-red-100 border-red-200"; // Red
+      case "DRAFT":
+      default:
+        return "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"; // Gray
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -255,6 +272,7 @@ export default function InvoicePage() {
               <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No invoices found.</TableCell></TableRow>
             ) : (
               data.content.map((inv) => {
+                // 👇 Lookup Client Name dynamically
                 const clientName = clients.find(c => c.id === inv.clientId)?.name || "Unknown Client";
                 
                 return (
@@ -266,9 +284,20 @@ export default function InvoicePage() {
                   <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
                   <TableCell>{clientName}</TableCell>
                   <TableCell>{inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM dd, yyyy') : '-'}</TableCell>
+                  
+                  {/* 👇 UPDATED: Use getStatusStyle for consistent colors */}
                   <TableCell>
-                    <Badge variant={inv.status === 'PAID' ? 'default' : 'secondary'}>{inv.status}</Badge>
+                    <Badge 
+                        variant="outline" 
+                        className={cn(
+                            "text-[10px] h-5 px-2 capitalize border", 
+                            getStatusStyle(inv.status)
+                        )}
+                    >
+                        {inv.status ? inv.status.toLowerCase() : "draft"}
+                    </Badge>
                   </TableCell>
+
                   <TableCell className="text-right font-bold">₹{inv.total.toFixed(2)}</TableCell>
                   
                   <TableCell 
@@ -310,7 +339,7 @@ export default function InvoicePage() {
                         <DropdownMenuItem onClick={() => handleEdit(inv)}>
                           <Pencil className="mr-2 h-4 w-4" /> Edit Details
                         </DropdownMenuItem>
-                        {/* 👇 UPDATED: Use initiateDelete */}
+                        
                         <DropdownMenuItem onClick={() => initiateDelete(inv.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete Invoice
                         </DropdownMenuItem>
@@ -367,7 +396,6 @@ export default function InvoicePage() {
         />
       )}
 
-      {/* 👇 Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent>
             <DialogHeader>

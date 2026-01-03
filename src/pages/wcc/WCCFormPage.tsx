@@ -49,17 +49,63 @@ export default function WCCFormPage() {
     const init = async () => {
         setLoading(true);
         try {
+            // 1. Fetch Clients first
             const clientData: any = await clientService.getAll();
-            if (Array.isArray(clientData)) setClients(clientData);
-            else if (clientData?.content) setClients(clientData.content);
+            let loadedClients: any[] = [];
+            
+            if (Array.isArray(clientData)) loadedClients = clientData;
+            else if (clientData?.content) loadedClients = clientData.content;
+            
+            setClients(loadedClients);
 
+            // 2. Fetch WCC if Edit Mode
             if (isEditMode) {
                 const data = await wccService.getById(id!);
+
+                // --- DATE FORMATTING ---
+                if (data.certificateDate) {
+                    try {
+                        data.certificateDate = format(new Date(data.certificateDate), "dd-MM-yyyy");
+                    } catch (e) { console.error("Invalid Cert Date", e); }
+                }
+                if (data.poDate) {
+                    try {
+                         data.poDate = format(new Date(data.poDate), "dd-MM-yyyy");
+                    } catch (e) { console.error("Invalid PO Date", e); }
+                }
+
+                // --- 👇 UPDATED: FULL SYNC OF ALL CLIENT DETAILS ---
+                if (data.clientId) {
+                    const latestClient = loadedClients.find((c: any) => c.id === data.clientId);
+                    if (latestClient) {
+                        // 1. Sync Names
+                        data.storeName = latestClient.name;
+                        data.clientName = latestClient.name;
+                        
+                        // 2. Sync GSTIN (Force update)
+                        data.gstin = latestClient.gstin || "";
+
+                        // 3. Sync Full Address (Address + State + Pincode)
+                        // We construct a cleaner address string from the client profile
+                        let fullAddress = latestClient.address || "";
+                        if (latestClient.state) {
+                            fullAddress += fullAddress ? `, ${latestClient.state}` : latestClient.state;
+                        }
+                        if (latestClient.pincode) {
+                            fullAddress += fullAddress ? ` - ${latestClient.pincode}` : latestClient.pincode;
+                        }
+
+                        // Overwrite project location if we found client details
+                        if (fullAddress.trim()) {
+                            data.projectLocation = fullAddress;
+                        }
+                    }
+                }
+                // ----------------------------------------------------
+
                 if(!data.items || data.items.length === 0) {
                     data.items = [{ srNo: 1, activity: "", qty: "" }];
                 }
-                // Ensure date is formatted for the UI if coming from backend
-                // (Optional safety, depending on how your backend returns it)
                 reset(data); 
             }
         } catch (error) {
@@ -81,7 +127,13 @@ export default function WCCFormPage() {
           setValue("clientId", client.id);
           setValue("storeName", client.name);
           setValue("clientName", client.name);
-          setValue("projectLocation", client.address || "");
+          
+          // Construct Full Address on Selection too
+          let fullAddress = client.address || "";
+          if (client.state) fullAddress += `, ${client.state}`;
+          if (client.pincode) fullAddress += ` - ${client.pincode}`;
+          
+          setValue("projectLocation", fullAddress);
           setValue("gstin", client.gstin || "");
       }
   };
@@ -93,24 +145,21 @@ export default function WCCFormPage() {
       }
   }, [storeName, isEditMode, setValue]);
 
-  // 👇 UPDATED: Convert Form Date (dd-MM-yyyy) to ISO Date (YYYY-MM-DD...) for Backend
   const onSubmit = async (data: WCCData) => {
     try {
       setLoading(true);
       
       const payload = {
           ...data,
-          // Parse "02-01-2026" -> Date Object -> ISO String
           certificateDate: parse(data.certificateDate, "dd-MM-yyyy", new Date()).toISOString(),
-          // Handle PO Date similarly if it exists
           poDate: data.poDate ? parse(data.poDate, "dd-MM-yyyy", new Date()).toISOString() : undefined
       };
 
       if (isEditMode) {
-        await wccService.update(id!, payload);
+        await wccService.update(id!, payload as any);
         toast.success("Certificate updated successfully");
       } else {
-        await wccService.create(payload);
+        await wccService.create(payload as any);
         toast.success("Certificate created successfully");
       }
       navigate("/wcc");
@@ -150,7 +199,7 @@ export default function WCCFormPage() {
                 <select 
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     onChange={handleClientSelect}
-                    defaultValue=""
+                    value={watch("clientId") || ""} 
                 >
                     <option value="" disabled>Select Existing Client to Auto-fill...</option>
                     {clients.map(c => (

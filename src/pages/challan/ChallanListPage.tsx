@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// 👇 Added 'AlertTriangle'
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -14,8 +13,8 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogDescription, // 👇 Added
-  DialogFooter       // 👇 Added
+  DialogDescription, 
+  DialogFooter 
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -35,7 +34,7 @@ export default function ChallanListPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // 👇 Delete Confirmation State
+  // Delete Confirmation State
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,13 +50,11 @@ export default function ChallanListPage() {
     }
   };
 
-  // 👇 Step 1: Open Dialog (Replaces old handleDelete)
   const initiateDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setDeleteId(id);
   };
 
-  // 👇 Step 2: Confirm Delete
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
@@ -144,7 +141,8 @@ export default function ChallanListPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Order No</TableHead>
-                <TableHead className="text-right w-[80px]"></TableHead>
+                {/* 👇 Added 'Actions' Header */}
+                <TableHead className="text-right w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -186,7 +184,6 @@ export default function ChallanListPage() {
                           <Pencil className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         
-                        {/* 👇 UPDATED to use initiateDelete */}
                         <DropdownMenuItem 
                             onClick={(e) => initiateDelete(e, challan.id!)}
                             className="text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -203,7 +200,6 @@ export default function ChallanListPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-[95vw] w-full h-[95vh] flex flex-col p-4">
           <DialogHeader className="mb-2">
@@ -219,7 +215,6 @@ export default function ChallanListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 👇 Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent>
             <DialogHeader>

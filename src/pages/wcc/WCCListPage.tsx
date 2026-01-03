@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download, AlertTriangle, Eye, FileCheck } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns"; 
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -24,13 +25,18 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-// Services
+// Services & Types
 import { wccService } from "@/services/wccService"; 
+import { clientService } from "@/services/clientService"; 
 import type { WCCData } from "@/types/wccTypes"; 
+
+// Import Frontend Generator
+import { generateWCCPdf } from "@/services/wccPdfService"; 
 
 export default function WCCListPage() {
   const navigate = useNavigate();
   const [certificates, setCertificates] = useState<WCCData[]>([]);
+  const [clients, setClients] = useState<any[]>([]); 
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -38,39 +44,63 @@ export default function WCCListPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Delete Confirmation State
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCertificates();
+    loadData();
   }, []);
 
-  const loadCertificates = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await wccService.getAll();
-      setCertificates(data);
+      const [wccData, clientData] = await Promise.all([
+          wccService.getAll(),
+          clientService.getAll()
+      ]);
+
+      setCertificates(wccData);
+      
+      if (Array.isArray(clientData)) setClients(clientData);
+      else if ((clientData as any)?.content) setClients((clientData as any).content);
+
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load certificates");
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 1: Open Delete Dialog
+  const getFreshWCC = (wcc: WCCData): WCCData => {
+      if (!wcc.clientId) return wcc; 
+      
+      const client = clients.find(c => c.id === wcc.clientId);
+      if (!client) return wcc; 
+
+      let fullAddress = client.address || "";
+      if (client.state) fullAddress += `, ${client.state}`;
+      if (client.pincode) fullAddress += ` - ${client.pincode}`;
+
+      return {
+          ...wcc,
+          storeName: client.name,      
+          clientName: client.name,      
+          gstin: client.gstin || wcc.gstin, 
+          projectLocation: fullAddress.trim() ? fullAddress : wcc.projectLocation
+      };
+  };
+
   const initiateDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setDeleteId(id);
   };
 
-  // Step 2: Confirm Delete
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
         await wccService.delete(deleteId);
         toast.success("Certificate deleted");
-        loadCertificates();
+        loadData(); 
     } catch (error) {
         toast.error("Failed to delete");
     } finally {
@@ -83,16 +113,17 @@ export default function WCCListPage() {
     navigate(`/wcc/${id}/edit`);
   };
 
-  const handleDownload = async (e: React.MouseEvent, id: string, refNo: string) => {
+  const handleDownload = (e: React.MouseEvent, doc: WCCData) => {
     e.stopPropagation(); 
     try {
       toast.info("Generating PDF...");
-      const blob = await wccService.downloadPdf(id);
-      const url = window.URL.createObjectURL(blob);
+      const freshDoc = getFreshWCC(doc); 
+      const blob = generateWCCPdf(freshDoc); 
       
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const safeName = (refNo || "WCC").replace(/[^a-zA-Z0-9-_]/g, "_");
+      const safeName = (freshDoc.refNo || "WCC").replace(/[^a-zA-Z0-9-_]/g, "_");
       link.setAttribute("download", `WCC_${safeName}.pdf`);
       document.body.appendChild(link);
       link.click();
@@ -104,10 +135,11 @@ export default function WCCListPage() {
     }
   };
 
-  const handlePreview = async (id: string) => {
+  const handlePreview = (doc: WCCData) => {
       try {
           toast.info("Loading Preview...");
-          const blob = await wccService.downloadPdf(id);
+          const freshDoc = getFreshWCC(doc);
+          const blob = generateWCCPdf(freshDoc);
           const url = window.URL.createObjectURL(blob);
           setPreviewUrl(url);
           setPreviewOpen(true);
@@ -116,7 +148,9 @@ export default function WCCListPage() {
       }
   };
 
-  const filteredDocs = certificates.filter(doc => 
+  const processedDocs = certificates.map(getFreshWCC);
+
+  const filteredDocs = processedDocs.filter(doc => 
     (doc.storeName || "").toLowerCase().includes(search.toLowerCase()) ||
     (doc.refNo || "").toLowerCase().includes(search.toLowerCase()) ||
     (doc.poNo || "").toLowerCase().includes(search.toLowerCase())
@@ -157,7 +191,8 @@ export default function WCCListPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Store / Client</TableHead>
                 <TableHead>PO No</TableHead>
-                <TableHead className="text-right w-[80px]"></TableHead>
+                {/* 👇 UPDATED: Added "Actions" Header */}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -174,17 +209,26 @@ export default function WCCListPage() {
                 <TableRow 
                     key={doc.id} 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => doc.id && handlePreview(doc.id)}
+                    onClick={() => handlePreview(doc)}
                 >
-                  <TableCell className="font-medium flex items-center gap-2">
-                    <FileCheck className="h-4 w-4 text-blue-600" />
-                    {doc.refNo}
+                  <TableCell className="font-medium align-middle"> {/* Added align-middle */}
+                    <div className="flex items-center gap-2">
+                         <FileCheck className="h-4 w-4 text-blue-600" />
+                         {doc.refNo}
+                    </div>
                   </TableCell>
-                  <TableCell>{doc.certificateDate}</TableCell>
-                  <TableCell>{doc.storeName}</TableCell>
-                  <TableCell>{doc.poNo}</TableCell>
                   
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="align-middle">
+                    {doc.certificateDate ? format(new Date(doc.certificateDate), "dd MMM yyyy") : "-"}
+                  </TableCell>
+                  
+                  <TableCell className="font-medium text-gray-900 align-middle">
+                      {doc.storeName}
+                  </TableCell>
+                  
+                  <TableCell className="align-middle">{doc.poNo}</TableCell>
+                  
+                  <TableCell className="text-right align-middle" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -194,11 +238,11 @@ export default function WCCListPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         
-                        <DropdownMenuItem onClick={(_e) => doc.id && handlePreview(doc.id)}>
+                        <DropdownMenuItem onClick={(_e) => handlePreview(doc)}>
                             <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem onClick={(e) => doc.id && handleDownload(e, doc.id!, doc.refNo)}>
+                        <DropdownMenuItem onClick={(e) => handleDownload(e, doc)}>
                           <Download className="mr-2 h-4 w-4 text-blue-600" /> Download PDF
                         </DropdownMenuItem>
                         
@@ -224,7 +268,6 @@ export default function WCCListPage() {
         </CardContent>
       </Card>
 
-      {/* PDF Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-[95vw] w-full h-[95vh] flex flex-col p-4">
           <DialogHeader className="mb-2">
@@ -240,7 +283,6 @@ export default function WCCListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent>
             <DialogHeader>
@@ -260,4 +302,3 @@ export default function WCCListPage() {
     </div>
   );
 }
-

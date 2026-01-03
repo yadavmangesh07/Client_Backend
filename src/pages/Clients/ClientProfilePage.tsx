@@ -10,7 +10,8 @@ import {
   Building2, 
   FileText, 
   Copy,
-  FolderOpen // 👈 Added Folder Icon
+  FolderOpen,
+  History
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -29,7 +30,6 @@ export default function ClientProfilePage() {
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const fetchProfile = async () => {
@@ -54,6 +54,35 @@ export default function ClientProfilePage() {
     navigator.clipboard.writeText(text);
     toast.success("Reference Number copied!");
   };
+
+  // 👇 NEW: Helper function to merge and sort events for the timeline
+  const getTimelineEvents = () => {
+    if (!data) return [];
+    const invoices = (data.recentInvoices || []).map((inv: any) => ({
+      type: "INVOICE",
+      date: inv.issuedAt,
+      title: `Invoice #${inv.invoiceNo}`,
+      subtitle: `Amount: ₹${inv.total.toFixed(2)}`,
+      status: inv.status,
+      id: inv.id
+    }));
+
+    const certificates = (data.recentCertificates || []).map((wcc: any) => ({
+      type: "WCC",
+      date: wcc.certificateDate,
+      title: "Work Completion Certificate",
+      subtitle: wcc.refNo ? `Ref: ${wcc.refNo}` : "No Ref No",
+      status: "Verified",
+      id: wcc.id
+    }));
+
+    // Merge and sort by Date Descending (Newest first)
+    return [...invoices, ...certificates].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  };
+
+  const timelineEvents = getTimelineEvents();
 
   if (loading) return <div className="p-10 text-center text-muted-foreground">Loading Client Profile...</div>;
   if (!data) return null;
@@ -80,7 +109,6 @@ export default function ClientProfilePage() {
           </div>
         </div>
         <div className="flex gap-2">
-           {/* 👇 ADDED: Manage Projects Button (Was missing compared to List View) */}
            <Button variant="outline" onClick={() => navigate(`/files/${client.id}`)}>
              <FolderOpen className="mr-2 h-4 w-4" /> Documents
            </Button>
@@ -111,7 +139,7 @@ export default function ClientProfilePage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Work Orders</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">WCC Certificate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.wccCount || 0}</div>
@@ -165,11 +193,57 @@ export default function ClientProfilePage() {
         {/* RIGHT COLUMN: ACTIVITY TABS */}
         <Card className="md:col-span-2 min-h-[500px]">
           <CardContent className="p-6">
-            <Tabs defaultValue="invoices" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
-                <TabsTrigger value="wcc">Work Certificates (WCC)</TabsTrigger>
+            <Tabs defaultValue="timeline" className="w-full"> {/* 👈 Default to Timeline? Or Invoices */}
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="timeline">Timeline</TabsTrigger> {/* 👈 New Trigger */}
+                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                <TabsTrigger value="wcc">WCC</TabsTrigger>
               </TabsList>
+
+              {/* 👇 NEW: TIMELINE CONTENT */}
+              <TabsContent value="timeline" className="space-y-6 pt-4">
+                 {timelineEvents.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-10 flex flex-col items-center gap-2">
+                        <History className="h-8 w-8 opacity-20" />
+                        <p>No activity recorded yet.</p>
+                    </div>
+                 ) : (
+                    <div className="relative border-l border-muted ml-3 space-y-8">
+                        {timelineEvents.map((event, idx) => (
+                            <div key={`${event.type}-${event.id}-${idx}`} className="relative pl-6">
+                                {/* Dot Icon */}
+                                <div className={`absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-background 
+                                    ${event.type === 'INVOICE' ? 'bg-blue-500' : 'bg-green-500'}`} 
+                                />
+                                
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-medium leading-none">
+                                            {event.title}
+                                        </p>
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {(() => {
+                                                try { return format(new Date(event.date), "MMM dd, yyyy"); } 
+                                                catch { return ""; }
+                                            })()}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground">
+                                            {event.subtitle}
+                                        </p>
+                                        {event.status && (
+                                            <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                                {event.status}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                 )}
+              </TabsContent>
               
               {/* INVOICES TAB */}
               <TabsContent value="invoices" className="space-y-4">
@@ -222,12 +296,10 @@ export default function ClientProfilePage() {
                           
                           <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                  {/* THE REF NO */}
                                   <span className="font-mono font-medium text-sm">
                                       {wcc.refNo || "No Reference No"}
                                   </span>
                                   
-                                  {/* COPY BUTTON */}
                                   {wcc.refNo && (
                                       <Button 
                                         variant="ghost" 
@@ -240,7 +312,6 @@ export default function ClientProfilePage() {
                                       </Button>
                                   )}
                               </div>
-                              {/* Safe Date Rendering */}
                               <p className="text-[10px] text-muted-foreground">
                                 {(() => {
                                     try {

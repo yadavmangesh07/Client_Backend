@@ -27,26 +27,35 @@ import {
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 
+import { clientService } from "@/services/clientService"; 
 import type { Invoice } from "@/types";
+import { cn } from "@/lib/utils"; 
 
-// Define Chart Config with a modern color
 const chartConfig = {
   revenue: {
     label: "Revenue",
-    // Using the primary color from your theme for consistency
     color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStats = async () => {
+    const loadData = async () => {
       try {
-        const res = await apiClient.get("/dashboard/stats");
-        setStats(res.data);
+        const [statsRes, clientsData] = await Promise.all([
+            apiClient.get("/dashboard/stats"),
+            clientService.getAll()
+        ]);
+
+        setStats(statsRes.data);
+
+        if (Array.isArray(clientsData)) setClients(clientsData);
+        else if ((clientsData as any)?.content) setClients((clientsData as any).content);
+
       } catch (error) {
         console.error(error);
         toast.error("Failed to load dashboard data");
@@ -54,8 +63,34 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    loadStats();
+    loadData();
   }, []);
+
+  const getClientName = (clientId: string) => {
+      if (!clientId) return "Unknown Client";
+      const client = clients.find(c => c.id === clientId);
+      return client ? client.name : "Unknown Client";
+  };
+
+  // 👇 UPDATED: Covers all variations to fix the color issue
+  const getStatusStyle = (status: string | undefined) => {
+    // Normalize string to uppercase to avoid case-sensitivity issues
+    const s = (status || "").toUpperCase();
+
+    switch (s) {
+      case "PAID":
+        return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200"; // Green
+      
+      case "PENDING":
+      case "UNPAID": 
+      case "OVERDUE":
+        return "bg-red-100 text-red-700 hover:bg-red-100 border-red-200"; // Red
+      
+      case "DRAFT":
+      default:
+        return "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"; // Gray
+    }
+  };
 
   if (loading) {
     return <div className="flex h-[50vh] items-center justify-center text-muted-foreground">Loading Dashboard...</div>;
@@ -70,7 +105,6 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Overview of your business performance.</p>
       </div>
 
-      {/* --- STATS CARDS --- */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -117,10 +151,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* --- CHART & RECENT ACTIVITY --- */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         
-        {/* MODERN REVENUE CHART */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Revenue Overview</CardTitle>
@@ -143,16 +175,13 @@ export default function DashboardPage() {
                       bottom: 0,
                     }}
                   >
-                    {/* Gradient Definition */}
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
                         <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
-                    
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--muted)/0.4)" />
-                    
                     <XAxis
                       dataKey="month"
                       tickLine={false}
@@ -161,8 +190,6 @@ export default function DashboardPage() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                       tickFormatter={(value) => value ? value.slice(0, 3) : ''}
                     />
-                    
-                    {/* Optional Y-Axis for scale */}
                     <YAxis
                       tickLine={false}
                       axisLine={false}
@@ -171,12 +198,10 @@ export default function DashboardPage() {
                       tickFormatter={(value) => `₹${(value/1000).toFixed(0)}k`}
                       width={60}
                     />
-
                     <ChartTooltip
                       cursor={false}
                       content={<ChartTooltipContent indicator="dot" />}
                     />
-                    
                     <Area
                       type="monotone"
                       dataKey="amount"
@@ -192,7 +217,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* RECENT INVOICES */}
         <Card className="col-span-3 lg:h-[450px] flex flex-col">
           <CardHeader>
             <CardTitle>Recent Invoices</CardTitle>
@@ -207,7 +231,7 @@ export default function DashboardPage() {
                   <div key={inv.id} className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {inv.client?.name || "Unknown Client"}
+                        {getClientName(inv.clientId)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         #{inv.invoiceNo} · {inv.issuedAt ? format(new Date(inv.issuedAt), "MMM dd, yyyy") : "No Date"}
@@ -217,12 +241,17 @@ export default function DashboardPage() {
                         <div className="font-bold text-sm">
                             ₹{(inv.total || 0).toFixed(2)}
                         </div>
+                        
                         <Badge 
-                          variant={inv.status === 'PAID' ? 'default' : inv.status === 'PENDING' ? 'destructive' : 'secondary'} 
-                          className="text-[10px] h-5 px-1.5 capitalize"
+                          variant="outline" 
+                          className={cn(
+                            "text-[10px] h-5 px-2 capitalize border", 
+                            getStatusStyle(inv.status) // 👈 Uses the fixed logic
+                          )}
                         >
-                            {inv.status.toLowerCase()}
+                            {inv.status ? inv.status.toLowerCase() : "draft"}
                         </Badge>
+
                     </div>
                   </div>
                 ))

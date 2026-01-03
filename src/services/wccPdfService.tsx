@@ -1,6 +1,17 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { format } from "date-fns"; // 👈 Import date-fns
 import type { WCCData } from "@/types/wccTypes"; 
+
+// Helper to safely format dates
+const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return "";
+    try {
+        return format(new Date(dateStr), "dd MMM yyyy");
+    } catch (e) {
+        return dateStr; // Fallback to original string if parsing fails
+    }
+};
 
 export const generateWCCPdf = (data: WCCData) => {
   const doc = new jsPDF();
@@ -9,25 +20,26 @@ export const generateWCCPdf = (data: WCCData) => {
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const margin = 15;
-  const contentWidth = pageWidth - (margin * 2); // Usually 180mm for A4
+  const contentWidth = pageWidth - (margin * 2); 
 
   // --- 1. TITLE ---
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text("Work Completion Certificate", pageWidth / 2, 15, { align: "center" });
   
-  // Underline the title
   const textWidth = doc.getTextWidth("Work Completion Certificate");
   doc.setLineWidth(0.5);
   doc.line((pageWidth / 2) - (textWidth / 2), 17, (pageWidth / 2) + (textWidth / 2), 17);
 
   // --- 2. HEADER GRID ---
-  // Define fixed widths for label columns
-  const col0Width = 25; // Store Name Label
-  const col2Width = 25; // Ref No Label
-  const col3Width = 35; // Ref No Value
-  // Calculate dynamic width for the main content column to fill the page perfectly
+  const col0Width = 25; 
+  const col2Width = 25; 
+  const col3Width = 35; 
   const col1Width = contentWidth - col0Width - col2Width - col3Width;
+
+  // 👇 PRE-FORMAT DATES BEFORE TABLE
+  const displayCertDate = formatDate(data.certificateDate);
+  const displayPoDate = formatDate(data.poDate);
 
   autoTable(doc, {
     startY: 20,
@@ -41,11 +53,10 @@ export const generateWCCPdf = (data: WCCData) => {
       cellPadding: 1.5,
       valign: 'middle',
     },
-    // Force the table to use the full calculated content width
     tableWidth: contentWidth, 
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: col0Width }, 
-      1: { cellWidth: col1Width }, // Dynamic width to ensure alignment
+      1: { cellWidth: col1Width }, 
       2: { fontStyle: 'bold', cellWidth: col2Width }, 
       3: { cellWidth: col3Width }
     },
@@ -60,7 +71,7 @@ export const generateWCCPdf = (data: WCCData) => {
         { content: 'PROJECT\nLOCATION:', styles: { fontStyle: 'bold' } },
         { content: data.projectLocation },
         { content: 'Date:', styles: { fontStyle: 'bold' } },
-        { content: data.certificateDate }
+        { content: displayCertDate } // 👈 Uses Formatted Date
       ],
       [
         { content: 'P.O. NO.', styles: { fontStyle: 'bold' } },
@@ -68,7 +79,7 @@ export const generateWCCPdf = (data: WCCData) => {
       ],
       [
         { content: 'DATE', styles: { fontStyle: 'bold' } },
-        { content: data.poDate, colSpan: 3 }
+        { content: displayPoDate, colSpan: 3 } // 👈 Uses Formatted Date
       ],
       [
         { content: 'GSTIN', styles: { fontStyle: 'bold' } },
@@ -86,7 +97,6 @@ export const generateWCCPdf = (data: WCCData) => {
 
   autoTable(doc, {
     startY: finalY, 
-    // Ensure this table also respects the exact content width
     tableWidth: contentWidth,
     head: [['Sr. No.', 'Activity', 'Qty- Sq.Ft/Nos.']],
     body: data.items.map(item => [
@@ -111,7 +121,7 @@ export const generateWCCPdf = (data: WCCData) => {
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 15 },
-      1: { halign: 'left' }, // Auto width fills remaining space
+      1: { halign: 'left' }, 
       2: { halign: 'center', cellWidth: 30 } 
     },
     didParseCell: function(data: any) {
@@ -175,7 +185,6 @@ export const generateWCCPdf = (data: WCCData) => {
     doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
   }
 
-  // --- SAVE ---
   const safeRef = data.refNo ? data.refNo.replace(/[^a-zA-Z0-9]/g, "_") : "WCC";
   return doc.output("blob");
 };

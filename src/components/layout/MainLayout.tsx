@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { ModeToggle } from "@/components/mode-toggle";
+// import { ModeToggle } from "@/components/mode-toggle";
 
 export function MainLayout() {
   const location = useLocation();
@@ -121,7 +121,7 @@ export function MainLayout() {
             Logout
           </button>
 
-          <ModeToggle />
+          {/* <ModeToggle /> */}
         </div>
       </aside>
 
