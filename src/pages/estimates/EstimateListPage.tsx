@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; 
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download, FileText } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, Download, FileText, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, isValid } from "date-fns"; 
 import { cn } from "@/lib/utils";
@@ -13,18 +13,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+// 👇 Added Select components for Filters
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 import { estimateService } from "@/services/estimateService";
 import { clientService } from "@/services/clientService"; 
-// 👇 Ensure this points to your index types
 import type { Estimate } from "@/types"; 
 
 export default function EstimateListPage() {
   const navigate = useNavigate();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 👇 Filter States
+  const [search, setSearch] = useState("");
+  const [filterClient, setFilterClient] = useState<string>("ALL");
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [sortOrder, setSortOrder] = useState<string>("desc");
 
   useEffect(() => {
     loadData();
@@ -100,10 +108,34 @@ export default function EstimateListPage() {
       }
   };
 
-  const filtered = estimates.filter(e => 
-      (e.estimateNo || "").toLowerCase().includes(search.toLowerCase()) ||
-      (getClientName(e.clientId) || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const resetFilters = () => {
+    setFilterClient("ALL");
+    setFilterStatus("ALL");
+    setSortOrder("desc");
+    setSearch("");
+  };
+
+  // 👇 Filter & Sort Logic
+  const filtered = estimates
+    .filter(e => {
+        // 1. Search Logic
+        const matchesSearch = (e.estimateNo || "").toLowerCase().includes(search.toLowerCase()) ||
+                              (getClientName(e.clientId) || "").toLowerCase().includes(search.toLowerCase());
+        
+        // 2. Client Filter
+        const matchesClient = filterClient === "ALL" || e.clientId === filterClient;
+
+        // 3. Status Filter
+        const matchesStatus = filterStatus === "ALL" || (e.status || "DRAFT") === filterStatus;
+
+        return matchesSearch && matchesClient && matchesStatus;
+    })
+    .sort((a, b) => {
+        // 4. Sorting Logic
+        const dateA = new Date(a.estimateDate || 0).getTime();
+        const dateB = new Date(b.estimateDate || 0).getTime();
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    });
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
@@ -115,6 +147,56 @@ export default function EstimateListPage() {
         <Button onClick={() => navigate("/estimates/new")}>
             <Plus className="mr-2 h-4 w-4" /> Create Estimate
         </Button>
+      </div>
+
+      {/* 👇 New Filter Bar */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-md border shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mr-2">
+            <Filter className="h-4 w-4" /> Filters:
+        </div>
+        
+        {/* Client Filter */}
+        <div className="w-[200px]">
+            <Select value={filterClient} onValueChange={setFilterClient}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="All Clients" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ALL">All Clients</SelectItem>
+                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="w-[150px]">
+             <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="All Status" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ALL">All Status</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
+                    <SelectItem value="SENT">Sent</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
+        {/* Sort Order */}
+        <div className="w-[160px]">
+             <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Sort Date" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="desc">Newest First</SelectItem>
+                    <SelectItem value="asc">Oldest First</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
+        {/* Reset Button */}
+        {(filterClient !== "ALL" || filterStatus !== "ALL" || search !== "") && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-red-500 hover:text-red-600 hover:bg-red-50">
+                <X className="mr-1 h-3 w-3" /> Reset
+            </Button>
+        )}
       </div>
 
       <Card>

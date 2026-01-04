@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
 import DashboardPage from "./pages/dashboard/DashboardPage";
-import ClientPage from "./pages/Clients/ClientPage"; // Check capitalization: 'Clients' or 'clients'?
+import ClientPage from "./pages/Clients/ClientPage"; 
 import InvoicePage from "./pages/invoices/InvoicePage";
 import LoginPage from "./pages/auth/LoginPage";
 
@@ -23,6 +23,9 @@ import ClientProfilePage from "./pages/Clients/ClientProfilePage";
 
 import EstimateListPage from "./pages/estimates/EstimateListPage";
 import EstimateFormPage from "./pages/estimates/EstimateFormPage"; 
+import InvoiceFormPage from "./pages/invoices/InvoiceFormPage";
+// 👇 IMPORT NEW INVOICE FORM PAGE
+ 
 
 function App() {
   return (
@@ -39,7 +42,10 @@ function App() {
             <Route path="/clients" element={<ClientPage />} />
             <Route path="/clients/:id/profile" element={<ClientProfilePage />} />
             
+            {/* 👇 UPDATED INVOICE ROUTES */}
             <Route path="/invoices" element={<InvoicePage />} />
+            <Route path="/invoices/new" element={<InvoiceFormPage />} />
+            <Route path="/invoices/:id/edit" element={<InvoiceFormPage />} />
             
             <Route path="/challans" element={<ChallanListPage />} />
             <Route path="/challans/new" element={<ChallanFormPage />} />

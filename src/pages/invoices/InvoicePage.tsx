@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // 👈 Hook for navigation
 import { Plus, Filter, X, MoreHorizontal, Eye, FileDown, Truck, Mail, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils"; // 👈 Import cn for badge styles
+import { cn } from "@/lib/utils";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -40,22 +41,21 @@ import { invoiceService } from "@/services/invoiceService";
 import { clientService } from "@/services/clientService"; 
 import type { Invoice, PageResponse, Client } from "@/types";
 
-// Import Forms
-import { InvoiceForm } from "@/features/invoices/InvoiceForm";
+// Import Forms (Removed InvoiceForm)
 import { EwayBillDialog } from "@/features/invoices/EwayBillDialog";
 import { InvoiceEmailDialog } from "@/features/invoices/InvoiceEmailDialog";
 
 export default function InvoicePage() {
+  const navigate = useNavigate(); // 👈 Init Hook
   const [data, setData] = useState<PageResponse<Invoice> | null>(null);
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]); 
-  
+   
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [sortOrder, setSortOrder] = useState<string>("desc"); 
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  // Removed isFormOpen & editingInvoice states
 
   const [ewayDialog, setEwayDialog] = useState<{open: boolean, invId: string, currentNo: string}>({
       open: false, invId: "", currentNo: ""
@@ -69,7 +69,6 @@ export default function InvoicePage() {
 
   useEffect(() => {
     clientService.getAll().then((res: any) => {
-        // Handle pagination vs array check if needed
         if (Array.isArray(res)) setClients(res);
         else if (res?.content) setClients(res.content);
     }).catch(console.error);
@@ -114,8 +113,9 @@ export default function InvoicePage() {
     }
   };
 
-  const handleCreate = () => { setEditingInvoice(null); setIsFormOpen(true); };
-  const handleEdit = (inv: Invoice) => { setEditingInvoice(inv); setIsFormOpen(true); };
+  // 👇 Updated Handlers to Navigate
+  const handleCreate = () => { navigate("/invoices/new"); };
+  const handleEdit = (inv: Invoice) => { navigate(`/invoices/${inv.id}/edit`); };
 
   const handleViewPdf = async (invoice: Invoice) => {
     try {
@@ -182,25 +182,24 @@ export default function InvoicePage() {
     setSortOrder("desc");
   };
 
-  // 👇 HELPER: Same Badge Style Logic as Dashboard
   const getStatusStyle = (status: string | undefined) => {
     const s = (status || "").toUpperCase();
     switch (s) {
       case "PAID":
-        return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200"; // Green
+        return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200"; 
       case "PENDING":
       case "UNPAID": 
       case "OVERDUE":
-        return "bg-red-100 text-red-700 hover:bg-red-100 border-red-200"; // Red
+        return "bg-red-100 text-red-700 hover:bg-red-100 border-red-200"; 
       case "DRAFT":
       default:
-        return "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"; // Gray
+        return "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"; 
     }
   };
 
   return (
     <div className="space-y-6">
-      
+       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
@@ -264,7 +263,7 @@ export default function InvoicePage() {
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          
+           
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Loading invoices...</TableCell></TableRow>
@@ -272,9 +271,8 @@ export default function InvoicePage() {
               <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No invoices found.</TableCell></TableRow>
             ) : (
               data.content.map((inv) => {
-                // 👇 Lookup Client Name dynamically
                 const clientName = clients.find(c => c.id === inv.clientId)?.name || "Unknown Client";
-                
+                 
                 return (
                 <TableRow 
                     key={inv.id}
@@ -284,8 +282,7 @@ export default function InvoicePage() {
                   <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
                   <TableCell>{clientName}</TableCell>
                   <TableCell>{inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM dd, yyyy') : '-'}</TableCell>
-                  
-                  {/* 👇 UPDATED: Use getStatusStyle for consistent colors */}
+                   
                   <TableCell>
                     <Badge 
                         variant="outline" 
@@ -299,7 +296,7 @@ export default function InvoicePage() {
                   </TableCell>
 
                   <TableCell className="text-right font-bold">₹{inv.total.toFixed(2)}</TableCell>
-                  
+                   
                   <TableCell 
                     className="text-right" 
                     onClick={(e) => e.stopPropagation()} 
@@ -313,16 +310,16 @@ export default function InvoicePage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        
+                         
                         <DropdownMenuItem onClick={() => handleViewPdf(inv)}>
                           <Eye className="mr-2 h-4 w-4" /> View Invoice
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDownloadPdf(inv)}>
                           <FileDown className="mr-2 h-4 w-4" /> Download PDF
                         </DropdownMenuItem>
-                        
+                         
                         <DropdownMenuSeparator />
-                        
+                         
                         <DropdownMenuItem onClick={() => handleDownloadEway(inv)}>
                           <Truck className="mr-2 h-4 w-4" /> Generate E-Way JSON
                         </DropdownMenuItem>
@@ -339,7 +336,7 @@ export default function InvoicePage() {
                         <DropdownMenuItem onClick={() => handleEdit(inv)}>
                           <Pencil className="mr-2 h-4 w-4" /> Edit Details
                         </DropdownMenuItem>
-                        
+                         
                         <DropdownMenuItem onClick={() => initiateDelete(inv.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete Invoice
                         </DropdownMenuItem>
@@ -353,13 +350,6 @@ export default function InvoicePage() {
           </TableBody>
         </Table>
       </div>
-
-      <InvoiceForm 
-        open={isFormOpen} 
-        onOpenChange={setIsFormOpen}
-        invoiceToEdit={editingInvoice}
-        onSuccess={loadInvoices}
-      />
 
       <EwayBillDialog 
         open={ewayDialog.open} 

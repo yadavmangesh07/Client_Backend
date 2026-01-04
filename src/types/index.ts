@@ -26,7 +26,6 @@ export interface InvoiceItem {
   taxRate?: number; // e.g. 18
   
 }
-
 export interface Attachment {
   filename: string;
   originalName: string;
