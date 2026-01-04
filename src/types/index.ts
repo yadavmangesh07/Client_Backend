@@ -117,3 +117,38 @@ export interface Company {
   logoUrl?: string;
   signatureUrl?: string;
 }
+
+export interface EstimateItem {
+    id?: string;
+    description: string;
+    hsnCode: string;
+    qty: number;
+    rate: number;
+    unit?: string; // e.g. NOS, SQFT
+    taxRate: number; // GST %
+}
+
+export interface Estimate {
+    id: string;
+    estimateNo: string;
+    estimateDate: string; // ISO Date
+    clientId: string;
+    clientName?: string; // For display
+    
+    // Address Details (Snapshot)
+    billingAddress: string;
+    shippingAddress?: string;
+    
+    items: EstimateItem[];
+    
+    // Totals
+    subTotal: number;
+    taxAmount: number;
+    total: number;
+    
+    status: 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED';
+    
+    // Additional Fields from your screenshot
+    subject?: string; // e.g. "Signage Work for Nykaa"
+    notes?: string;   // Terms & Conditions
+}

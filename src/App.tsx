@@ -3,9 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
-import CompanyProfilePage from "@/pages/profile/CompanyProfilePage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
-import ClientPage from "./pages/Clients/ClientPage";
+import ClientPage from "./pages/Clients/ClientPage"; // Check capitalization: 'Clients' or 'clients'?
 import InvoicePage from "./pages/invoices/InvoicePage";
 import LoginPage from "./pages/auth/LoginPage";
 
@@ -18,47 +17,52 @@ import ChallanListPage from "./pages/challan/ChallanListPage";
 import ChallanFormPage from "./pages/challan/ChallanFormPage";
 import MyAccountPage from "./pages/settings/MyAccountPage";
 import WCCListPage from "./pages/wcc/WCCListPage";
-
-// 👇 FIX THIS IMPORT
-import WCCFormPage from "./pages/wcc/WCCFormPage"; 
+import WCCFormPage from "./pages/wcc/WCCFormPage";
+import CompanyProfilePage from "@/pages/profile/CompanyProfilePage";
 import ClientProfilePage from "./pages/Clients/ClientProfilePage";
+
+import EstimateListPage from "./pages/estimates/EstimateListPage";
+import EstimateFormPage from "./pages/estimates/EstimateFormPage"; 
 
 function App() {
   return (
     <BrowserRouter>
       <Toaster />
       <Routes>
-        {/* Public Route: Login */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* 🔒 Protected Routes (Everything inside here requires login) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            {/* Redirect root to dashboard */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientPage />} />
-            <Route path="/invoices" element={<InvoicePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/profile" element={<CompanyProfilePage />} />
-            <Route path="/files" element={<FilesPage />} />
-            <Route path="/files/:clientId" element={<ClientProjectsPage />} />
             <Route path="/clients/:id/profile" element={<ClientProfilePage />} />
+            
+            <Route path="/invoices" element={<InvoicePage />} />
+            
             <Route path="/challans" element={<ChallanListPage />} />
             <Route path="/challans/new" element={<ChallanFormPage />} />
             <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
             
-            {/* WCC Routes */}
+            {/* ESTIMATES */}
+            <Route path="/estimates" element={<EstimateListPage />} /> 
+            <Route path="/estimates/new" element={<EstimateFormPage />} />
+            <Route path="/estimates/:id/edit" element={<EstimateFormPage />} />
+            
             <Route path="/wcc" element={<WCCListPage />} />
             <Route path="/wcc/new" element={<WCCFormPage />} />
             <Route path="/wcc/:id/edit" element={<WCCFormPage />} />
             
+            <Route path="/files" element={<FilesPage />} />
+            <Route path="/files/:clientId" element={<ClientProjectsPage />} />
+            
+            <Route path="/profile" element={<CompanyProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/account" element={<MyAccountPage />} />
           </Route>
         </Route>
 
-        {/* Catch-all: Redirect unknown paths to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

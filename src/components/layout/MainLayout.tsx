@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-// 👇 Added 'FileCheck' icon
-import { Users, FileText, LayoutDashboard, LogOut, Settings, User, Building2, FolderOpen, Truck, UserCog, FileCheck } from "lucide-react"; 
+// 👇 Added 'Calculator' icon
+import { 
+  Users, 
+  FileText, 
+  LayoutDashboard, 
+  LogOut, 
+  Settings, 
+  User, 
+  Building2, 
+  FolderOpen, 
+  Truck, 
+  UserCog, 
+  FileCheck,
+  Calculator 
+} from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { companyService } from "@/services/companyService"; 
@@ -45,9 +58,11 @@ export function MainLayout() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
-    { href: "/challans", label: "Delivery Challans", icon: Truck },
     
-    // 👇 NEW: Work Completion Certificates Tab
+    // 👇 NEW: Estimates Tab
+    { href: "/estimates", label: "Estimates", icon: Calculator },
+
+    { href: "/challans", label: "Delivery Challans", icon: Truck },
     { href: "/wcc", label: "Work Certificates", icon: FileCheck },
 
     { href: "/files", label: "Files & Folders", icon: FolderOpen },
@@ -92,7 +107,7 @@ export function MainLayout() {
         <nav className="flex-1 flex flex-col gap-4 px-2 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
+            const isActive = location.pathname === item.href || (item.href !== "/dashboard" && location.pathname.startsWith(item.href + "/"));
             
             return (
               <Link
