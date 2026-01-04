@@ -13,10 +13,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// 👇 Added Select components for Filters
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 
 import { estimateService } from "@/services/estimateService";
 import { clientService } from "@/services/clientService"; 
@@ -28,11 +33,15 @@ export default function EstimateListPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 👇 Filter States
+  // Filter States
   const [search, setSearch] = useState("");
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [sortOrder, setSortOrder] = useState<string>("desc");
+
+  // Preview State
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -69,7 +78,8 @@ export default function EstimateListPage() {
       } catch(e) { toast.error("Failed to delete"); }
   };
 
-  const handleDownload = async (id: string, estNo: string) => {
+  const handleDownload = async (e: React.MouseEvent, id: string, estNo: string) => {
+      e.stopPropagation(); // Prevent row click
       try {
           toast.info("Downloading PDF...");
           const blob = await estimateService.downloadPdf(id);
@@ -81,6 +91,18 @@ export default function EstimateListPage() {
           link.click();
           link.remove();
       } catch(e) { toast.error("Failed to download PDF"); }
+  };
+
+  const handlePreview = async (id: string) => {
+      try {
+          toast.info("Loading Preview...");
+          const blob = await estimateService.downloadPdf(id);
+          const url = window.URL.createObjectURL(blob);
+          setPreviewUrl(url);
+          setPreviewOpen(true);
+      } catch(error) {
+          toast.error("Failed to load preview");
+      }
   };
 
   const getClientName = (id: string) => {
@@ -115,23 +137,15 @@ export default function EstimateListPage() {
     setSearch("");
   };
 
-  // 👇 Filter & Sort Logic
   const filtered = estimates
     .filter(e => {
-        // 1. Search Logic
         const matchesSearch = (e.estimateNo || "").toLowerCase().includes(search.toLowerCase()) ||
                               (getClientName(e.clientId) || "").toLowerCase().includes(search.toLowerCase());
-        
-        // 2. Client Filter
         const matchesClient = filterClient === "ALL" || e.clientId === filterClient;
-
-        // 3. Status Filter
         const matchesStatus = filterStatus === "ALL" || (e.status || "DRAFT") === filterStatus;
-
         return matchesSearch && matchesClient && matchesStatus;
     })
     .sort((a, b) => {
-        // 4. Sorting Logic
         const dateA = new Date(a.estimateDate || 0).getTime();
         const dateB = new Date(b.estimateDate || 0).getTime();
         return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
@@ -149,13 +163,11 @@ export default function EstimateListPage() {
         </Button>
       </div>
 
-      {/* 👇 New Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-md border shadow-sm">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mr-2">
             <Filter className="h-4 w-4" /> Filters:
         </div>
         
-        {/* Client Filter */}
         <div className="w-[200px]">
             <Select value={filterClient} onValueChange={setFilterClient}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="All Clients" /></SelectTrigger>
@@ -166,7 +178,6 @@ export default function EstimateListPage() {
             </Select>
         </div>
 
-        {/* Status Filter */}
         <div className="w-[150px]">
              <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="All Status" /></SelectTrigger>
@@ -180,7 +191,6 @@ export default function EstimateListPage() {
             </Select>
         </div>
 
-        {/* Sort Order */}
         <div className="w-[160px]">
              <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Sort Date" /></SelectTrigger>
@@ -191,7 +201,6 @@ export default function EstimateListPage() {
             </Select>
         </div>
 
-        {/* Reset Button */}
         {(filterClient !== "ALL" || filterStatus !== "ALL" || search !== "") && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-red-500 hover:text-red-600 hover:bg-red-50">
                 <X className="mr-1 h-3 w-3" /> Reset
@@ -233,11 +242,19 @@ export default function EstimateListPage() {
                 <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No estimates found.</TableCell></TableRow>
               ) : (
                 filtered.map((est) => (
-                  <TableRow key={est.id}>
-                    <TableCell className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-orange-500" />
-                        {est.estimateNo || "N/A"}
+                  <TableRow 
+                    key={est.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handlePreview(est.id)}
+                  >
+                    {/* 👇 FIX: Wrapper Div added for Vertical Centering */}
+                    <TableCell>
+                        <div className="flex items-center gap-2 font-medium">
+                            <FileText className="h-4 w-4 text-orange-500" />
+                            <span>{est.estimateNo || "N/A"}</span>
+                        </div>
                     </TableCell>
+
                     <TableCell>{formatDateSafe(est.estimateDate)}</TableCell>
                     <TableCell>{getClientName(est.clientId)}</TableCell>
                     <TableCell>
@@ -246,13 +263,14 @@ export default function EstimateListPage() {
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right font-bold">₹{(est.total || 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
+                    
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleDownload(est.id, est.estimateNo)}>
+                                <DropdownMenuItem onClick={(e) => handleDownload(e, est.id, est.estimateNo)}>
                                     <Download className="mr-2 h-4 w-4" /> Download PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => navigate(`/estimates/${est.id}/edit`)}>
@@ -271,6 +289,23 @@ export default function EstimateListPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-[90vw] w-full h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-2 border-b bg-white rounded-t-lg">
+            <DialogTitle>Estimate Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full bg-gray-100 p-0 overflow-hidden">
+            {previewUrl && (
+              <iframe 
+                src={previewUrl} 
+                className="w-full h-full border-0" 
+                title="Estimate Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
