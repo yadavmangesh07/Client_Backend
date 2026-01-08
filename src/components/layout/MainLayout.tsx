@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"; 
 import { Link, useLocation, Outlet } from "react-router-dom";
-// 👇 Added 'Calculator' icon
 import { 
   Users, 
   FileText, 
@@ -11,7 +10,6 @@ import {
   Building2, 
   FolderOpen, 
   Truck, 
-  UserCog, 
   FileCheck,
   Calculator 
 } from "lucide-react"; 
@@ -29,7 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// import { ModeToggle } from "@/components/mode-toggle";
+// 👇 Import the Floating Overlay Component
+import { FloatingUserNav } from "@/components/common/FloatingUserNav";
 
 export function MainLayout() {
   const location = useLocation();
@@ -58,22 +57,18 @@ export function MainLayout() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
-    
-    // 👇 NEW: Estimates Tab
     { href: "/estimates", label: "Estimates", icon: Calculator },
-
     { href: "/challans", label: "Delivery Challans", icon: Truck },
     { href: "/wcc", label: "Work Certificates", icon: FileCheck },
-
     { href: "/files", label: "Files & Folders", icon: FolderOpen },
-    { href: "/account", label: "My Account", icon: UserCog },
     { label: "My Company", href: "/profile", icon: User },
+    //{ href: "/account", label: "My Account", icon: UserCog },
     { label: "Settings", href: "/settings", icon: Settings }
   ];
 
-  const handleLogoutClick = () => {
-    setShowLogoutDialog(true);
-  };
+  // const handleLogoutClick = () => {
+  //   setShowLogoutDialog(true);
+  // };
 
   const confirmLogout = () => {
     authService.logout();
@@ -82,7 +77,8 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-screen w-full bg-muted/40">
-      {/* Sidebar */}
+      
+      {/* --- SIDEBAR (Inline) --- */}
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
         
         {/* Brand Header */}
@@ -125,9 +121,8 @@ export function MainLayout() {
           })}
         </nav>
 
-        {/* Footer: Logout & Theme Toggle */}
-        <div className="border-t p-4 flex items-center gap-2">
-          
+        {/* Footer: Logout */}
+        {/* <div className="border-t p-4 flex items-center gap-2">
           <button
             onClick={handleLogoutClick}
             className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
@@ -135,14 +130,17 @@ export function MainLayout() {
             <LogOut className="h-4 w-4" />
             Logout
           </button>
-
-          {/* <ModeToggle /> */}
-        </div>
+        </div> */}
       </aside>
 
-      {/* Main Content Area */}
+      {/* --- MAIN CONTENT AREA --- */}
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0">
+        
+        {/* 👇 Added Floating User Nav (Overlay) */}
+        {/* This will appear fixed in the top-right corner */}
+        <FloatingUserNav />
+
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 mt-4">
           <Outlet />
         </main>
       </div>
