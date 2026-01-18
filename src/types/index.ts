@@ -151,3 +151,17 @@ export interface Estimate {
     subject?: string; // e.g. "Signage Work for Nykaa"
     notes?: string;   // Terms & Conditions
 }
+
+export interface Purchase {
+  id?: string;
+  storeName: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  totalAmount: number;
+  amountPaid: number;
+  paymentMode: string;
+  paymentDate: string;
+  status: string;
+  notes?: string;
+  createdBy?: string;
+}

@@ -24,6 +24,7 @@ import ClientProfilePage from "./pages/Clients/ClientProfilePage";
 import EstimateListPage from "./pages/estimates/EstimateListPage";
 import EstimateFormPage from "./pages/estimates/EstimateFormPage"; 
 import InvoiceFormPage from "./pages/invoices/InvoiceFormPage";
+import PurchasesPage from "./pages/purchases/PurchasePage";
 // 👇 IMPORT NEW INVOICE FORM PAGE
  
 
@@ -66,6 +67,8 @@ function App() {
             <Route path="/profile" element={<CompanyProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/account" element={<MyAccountPage />} />
+            <Route path="/purchases" element={<PurchasesPage />} />
+            
           </Route>
         </Route>
 

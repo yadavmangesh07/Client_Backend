@@ -11,7 +11,8 @@ import {
   FolderOpen, 
   Truck, 
   FileCheck,
-  Calculator 
+  Calculator,
+  ShoppingCart // 👈 Added Icon for Purchases
 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
@@ -57,6 +58,10 @@ export function MainLayout() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/invoices", label: "Invoices", icon: FileText },
+    
+    // 👇 NEW: Purchases Tab
+    { href: "/purchases", label: "Purchases", icon: ShoppingCart },
+
     { href: "/estimates", label: "Estimates", icon: Calculator },
     { href: "/challans", label: "Delivery Challans", icon: Truck },
     { href: "/wcc", label: "Work Certificates", icon: FileCheck },
@@ -121,7 +126,7 @@ export function MainLayout() {
           })}
         </nav>
 
-        {/* Footer: Logout */}
+        {/* Footer: Logout - Commented out as requested */}
         {/* <div className="border-t p-4 flex items-center gap-2">
           <button
             onClick={handleLogoutClick}
@@ -137,10 +142,10 @@ export function MainLayout() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
         
         {/* 👇 Added Floating User Nav (Overlay) */}
-        {/* This will appear fixed in the top-right corner */}
         <FloatingUserNav />
 
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 mt-4">
+        {/* 👇 UPDATED: Changed mt-4 to mt-16 to prevent overlap */}
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 mt-16">
           <Outlet />
         </main>
       </div>
