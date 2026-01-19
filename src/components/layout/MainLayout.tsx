@@ -12,7 +12,7 @@ import {
   Truck, 
   FileCheck,
   Calculator,
-  ShoppingCart // 👈 Added Icon for Purchases
+  ShoppingCart
 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
@@ -34,7 +34,6 @@ import { FloatingUserNav } from "@/components/common/FloatingUserNav";
 export function MainLayout() {
   const location = useLocation();
   const [brand, setBrand] = useState({ name: "JMD Decor", logo: "" });
-  
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
@@ -54,26 +53,39 @@ export function MainLayout() {
     loadBranding();
   }, []);
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/clients", label: "Clients", icon: Users },
-    { href: "/invoices", label: "Invoices", icon: FileText },
-    
-    // 👇 NEW: Purchases Tab
-    { href: "/purchases", label: "Purchases", icon: ShoppingCart },
-
-    { href: "/estimates", label: "Estimates", icon: Calculator },
-    { href: "/challans", label: "Delivery Challans", icon: Truck },
-    { href: "/wcc", label: "Work Certificates", icon: FileCheck },
-    { href: "/files", label: "Files & Folders", icon: FolderOpen },
-    { label: "My Company", href: "/profile", icon: User },
-    //{ href: "/account", label: "My Account", icon: UserCog },
-    { label: "Settings", href: "/settings", icon: Settings }
+  // 👇 UPDATED: Organized Navigation into Groups
+  const navGroups = [
+    {
+      title: "Overview",
+      items: [
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/clients", label: "Clients", icon: Users },
+      ]
+    },
+    {
+      title: "Finance",
+      items: [
+        { href: "/invoices", label: "Invoices", icon: FileText },
+        { href: "/purchases", label: "Purchases", icon: ShoppingCart },
+        { href: "/estimates", label: "Estimates", icon: Calculator },
+      ]
+    },
+    {
+      title: "Operations",
+      items: [
+        { href: "/challans", label: "Delivery Challans", icon: Truck },
+        { href: "/wcc", label: "Work Certificates", icon: FileCheck },
+        { href: "/files", label: "Files & Folders", icon: FolderOpen },
+      ]
+    },
+    {
+      title: "System",
+      items: [
+        { href: "/profile", label: "My Company", icon: User },
+        { href: "/settings", label: "Settings", icon: Settings },
+      ]
+    }
   ];
-
-  // const handleLogoutClick = () => {
-  //   setShowLogoutDialog(true);
-  // };
 
   const confirmLogout = () => {
     authService.logout();
@@ -81,76 +93,95 @@ export function MainLayout() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/40">
+    <div className="flex min-h-screen w-full bg-[#f8f9fc]"> 
+      {/* Changed bg to a very light cool gray for better contrast */}
       
-      {/* --- SIDEBAR (Inline) --- */}
-      <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
+      {/* --- SIDEBAR --- */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-white border-r shadow-[2px_0_20px_-10px_rgba(0,0,0,0.05)] sm:flex">
         
-        {/* Brand Header */}
-        <div className="flex h-16 shrink-0 items-center border-b px-6">
+        {/* Brand Header - Centered */}
+        {/* 👇 UPDATED: Added 'justify-center' to center the logo */}
+        <div className="flex h-20 shrink-0 items-center justify-center px-6 border-b border-gray-50">
           {brand.logo ? (
-            <Link to="/" className="flex items-center gap-2 font-semibold">
+            <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
               <img 
                 src={brand.logo} 
                 alt={brand.name} 
-                className="h-8 w-auto object-contain max-w-[180px]" 
+                className="h-10 w-auto object-contain" 
               />
             </Link>
           ) : (
-            <Link to="/" className="flex items-center gap-2 font-semibold">
-              <Building2 className="h-6 w-6 text-primary" />
+            <Link to="/" className="flex items-center gap-3 font-bold text-xl tracking-tight text-gray-900">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
+                 <Building2 className="h-5 w-5" />
+              </div>
               <span>{brand.name}</span>
             </Link>
           )}
         </div>
         
-        {/* Menu Items */}
-        <nav className="flex-1 flex flex-col gap-4 px-2 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.href || (item.href !== "/dashboard" && location.pathname.startsWith(item.href + "/"));
-            
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                  isActive ? "bg-muted text-primary font-medium" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+        {/* Navigation Groups */}
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+          {navGroups.map((group, groupIndex) => (
+            <div key={groupIndex}>
+              {/* Group Title */}
+              <h3 className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                {group.title}
+              </h3>
+              
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  // Check active state
+                  const isActive = location.pathname === item.href || (item.href !== "/dashboard" && location.pathname.startsWith(item.href + "/"));
+                  
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        "group flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                        isActive 
+                          ? "bg-primary/10 text-primary shadow-sm" // Active Style
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900" // Inactive Style
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-gray-400 group-hover:text-gray-600")} />
+                        {item.label}
+                      </div>
+                      
+                      {/* Active Indicator Dot */}
+                      {isActive && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-in fade-in zoom-in" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Footer: Logout - Commented out as requested */}
-        {/* <div className="border-t p-4 flex items-center gap-2">
-          <button
-            onClick={handleLogoutClick}
-            className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-red-600 hover:bg-red-50"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
-        </div> */}
+        {/* Optional Footer/Version Info */}
+        <div className="p-4 border-t text-xs text-center text-gray-400">
+            JMD Decor v1.0
+        </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
+      {/* --- MAIN CONTENT --- */}
+      <div className="flex flex-col flex-1 sm:pl-64 transition-all duration-300">
         
-        {/* 👇 Added Floating User Nav (Overlay) */}
+        {/* Floating User Nav Overlay */}
         <FloatingUserNav />
 
-        {/* 👇 UPDATED: Changed mt-4 to mt-16 to prevent overlap */}
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 mt-16">
+        {/* Content Area */}
+        <main className="flex-1 p-4 sm:px-8 sm:py-6 mt-16 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <Outlet />
         </main>
       </div>
 
-      {/* Logout Confirmation Dialog */}
+      {/* Logout Dialog */}
       <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <DialogContent>
           <DialogHeader>
@@ -164,7 +195,7 @@ export function MainLayout() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Logout
+               <LogOut className="mr-2 h-4 w-4" /> Log Out
             </Button>
           </DialogFooter>
         </DialogContent>
