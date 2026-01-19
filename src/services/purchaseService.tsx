@@ -1,6 +1,6 @@
 import axios from "@/lib/axios";
 // 👇 FIX 1: Removed invalid 'export' keyword from import
-import type { Purchase } from "@/types";
+import type { Purchase, PurchaseStats } from "@/types";
 
 export const purchaseService = {
   getAll: async () => {
@@ -18,5 +18,11 @@ export const purchaseService = {
     // 👇 FIX 2: Added leading slash '/' and changed 'purchase' to 'purchases' (plural)
     const response = await axios.put<Purchase>(`/purchases/${id}`, data);
     return response.data;
+  },
+  getStats: async (month: number, year: number) => {
+    const { data } = await axios.get<{ monthly: PurchaseStats; yearly: PurchaseStats }>(
+      `/purchases/stats?month=${month}&year=${year}`
+    );
+    return data;
   }
 };

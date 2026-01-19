@@ -5,7 +5,8 @@ import {
   Trash2, 
   User, 
   MoreHorizontal,
-  AlertTriangle 
+  AlertTriangle,
+  Eye 
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,21 +21,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// 👇 NEW IMPORTS for the Custom Alert
-
-
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import type { Purchase } from "@/types";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface PurchaseListProps {
   data: Purchase[];
   onEdit: (purchase: Purchase) => void;
   onDelete: (id: string) => void;
+  // 👇 Optional prop for row clicking
+  onRowClick?: (purchase: Purchase) => void;
 }
 
-export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
-  // State to manage the delete dialog
+export function PurchaseList({ data, onEdit, onDelete, onRowClick }: PurchaseListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const confirmDelete = () => {
@@ -80,7 +87,12 @@ export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
                         data.map((item, index) => {
                             const itemUnpaid = Math.max(0, item.totalAmount - item.amountPaid);
                             return (
-                                <TableRow key={item.id}>
+                                <TableRow 
+                                    key={item.id} 
+                                    // 👇 Make row clickable
+                                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                    onClick={() => onRowClick?.(item)}
+                                >
                                     <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                     <TableCell className="font-semibold text-gray-900">{item.storeName}</TableCell>
                                     <TableCell>{item.invoiceNo || "-"}</TableCell>
@@ -95,9 +107,9 @@ export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
                                     
                                     <TableCell>
                                         <Badge variant="outline" className={`
-                                            ${item.status === 'Full Paid' ? 'bg-green-50 text-green-700 border-green-200' : ''}
-                                            ${item.status === 'Partially Paid' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''}
-                                            ${item.status === 'Unpaid' ? 'bg-red-50 text-red-700 border-red-200' : ''}
+                                            ${item.status?.includes('Full') ? 'bg-green-50 text-green-700 border-green-200' : ''}
+                                            ${item.status?.includes('Partially') ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''}
+                                            ${item.status?.includes('Unpaid') ? 'bg-red-50 text-red-700 border-red-200' : ''}
                                         `}>
                                             {item.status}
                                         </Badge>
@@ -106,7 +118,7 @@ export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
                                     <TableCell>{item.paymentMode}</TableCell>
                                     
                                     <TableCell className="text-nowrap">
-                                        {format(new Date(item.paymentDate), "dd MMM yyyy")}
+                                        {format(new Date(item.paymentDate || new Date()), "dd MMM yyyy")}
                                     </TableCell>
 
                                     <TableCell>
@@ -126,15 +138,26 @@ export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                          <DropdownMenuItem onClick={() => onEdit(item)}>
+                                          
+                                          {/* 👇 New View Option */}
+                                          <DropdownMenuItem onClick={() => onRowClick?.(item)}>
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            View Details
+                                          </DropdownMenuItem>
+                                          
+                                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(item); }}>
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit Details
                                           </DropdownMenuItem>
+                                          
                                           <DropdownMenuSeparator />
+                                          
                                           <DropdownMenuItem 
                                             className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                            // 👇 Instead of deleting directly, set the ID to open the dialog
-                                            onClick={() => item.id && setDeleteId(item.id)}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); // Prevent row click
+                                                item.id && setDeleteId(item.id); 
+                                            }}
                                           >
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Delete Record
@@ -151,7 +174,6 @@ export function PurchaseList({ data, onEdit, onDelete }: PurchaseListProps) {
         </CardContent>
       </Card>
 
-      {/* 👇 SHADCN ALERT DIALOG */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

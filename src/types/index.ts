@@ -164,4 +164,10 @@ export interface Purchase {
   status: string;
   notes?: string;
   createdBy?: string;
+  remarks?: string;
+}
+export interface PurchaseStats {
+  totalExpense: number;
+  totalPaid: number;
+  totalUnpaid: number;
 }

@@ -1,17 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState} from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown } from "lucide-react"; 
+import { Check} from "lucide-react"; 
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-// 👇 Added CommandList to imports
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
 
 import { authService } from "@/services/authService";
 import { purchaseService } from "@/services/purchaseService";
@@ -27,7 +24,10 @@ interface PurchaseFormProps {
 
 export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existingStores }: PurchaseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [openStoreDropdown, setOpenStoreDropdown] = useState(false); 
+  
+  // 👇 New State for simple autocomplete
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredStores, setFilteredStores] = useState<string[]>([]);
 
   const defaultState: Purchase = {
     storeName: "",
@@ -38,19 +38,20 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existing
     paymentMode: "Bank Transfer",
     paymentDate: format(new Date(), "yyyy-MM-dd"),
     status: "Unpaid",
-    createdBy: ""
+    createdBy: "",
+    remarks: "" 
   };
 
   const [formData, setFormData] = useState<Purchase>(defaultState);
 
-  // Load data on open
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setFormData({
             ...initialData,
             invoiceDate: format(new Date(initialData.invoiceDate), "yyyy-MM-dd"),
-            paymentDate: format(new Date(initialData.paymentDate), "yyyy-MM-dd"),
+            paymentDate: format(new Date(initialData.paymentDate || new Date()), "yyyy-MM-dd"),
+            remarks: initialData.remarks || "" 
         });
       } else {
         const user = authService.getCurrentUser();
@@ -75,6 +76,16 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existing
         setFormData((prev: any) => ({ ...prev, status: newStatus }));
     }
   }, [formData.totalAmount, formData.amountPaid]);
+
+  // 👇 Filter Logic for the Dropdown
+  useEffect(() => {
+    if (!formData.storeName) {
+        setFilteredStores(existingStores);
+    } else {
+        const lower = formData.storeName.toLowerCase();
+        setFilteredStores(existingStores.filter(s => s.toLowerCase().includes(lower)));
+    }
+  }, [formData.storeName, existingStores]);
 
   const handleSubmit = async () => {
     if (!formData.storeName || !formData.totalAmount) {
@@ -102,7 +113,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existing
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl overflow-visible">
+      <DialogContent className="max-w-2xl overflow-visible max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Purchase" : "Add New Purchase"}</DialogTitle>
         </DialogHeader>
@@ -112,60 +123,41 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existing
           {/* Row 1: Store & Invoice */}
           <div className="grid grid-cols-2 gap-4">
             
-            {/* Store Dropdown */}
-            <div className="grid gap-2">
+            {/* 👇 UPDATED: Custom Autocomplete Input */}
+            <div className="grid gap-2 relative">
                 <Label>Store Name</Label>
-                <Popover open={openStoreDropdown} onOpenChange={setOpenStoreDropdown}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openStoreDropdown}
-                      className="justify-between w-full font-normal"
-                    >
-                      {formData.storeName || "Select or Type Store..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput 
-                        placeholder="Search store..." 
-                        onValueChange={(val: string) => {
-                           if(val) setFormData({...formData, storeName: val});
-                        }}
-                      />
-                      {/* 👇 FIXED: Wrapped in CommandList to prevent crash */}
-                      <CommandList>
-                        <CommandEmpty>
-                            <p className="text-xs text-muted-foreground p-2">
-                               Press Enter to use "{formData.storeName}"
-                            </p>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {existingStores.map((store) => (
-                            <CommandItem
-                              key={store}
-                              value={store}
-                              onSelect={(currentValue: string) => {
-                                setFormData({...formData, storeName: currentValue});
-                                setOpenStoreDropdown(false);
-                              }}
+                <Input 
+                    placeholder="Search or Type new store..."
+                    value={formData.storeName}
+                    onChange={(e) => {
+                        setFormData({...formData, storeName: e.target.value});
+                        setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    // Delay hiding to allow clicking the list
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    autoComplete="off"
+                />
+                
+                {/* Suggestions List */}
+                {showSuggestions && filteredStores.length > 0 && (
+                    <div className="absolute top-[70px] z-50 w-full rounded-md border bg-white shadow-md max-h-[200px] overflow-y-auto">
+                        {filteredStores.map((store) => (
+                            <div
+                                key={store}
+                                className="cursor-pointer px-4 py-2 text-sm hover:bg-slate-100 transition-colors flex items-center justify-between"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent blur
+                                    setFormData({...formData, storeName: store});
+                                    setShowSuggestions(false);
+                                }}
                             >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.storeName === store ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {store}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                                {store}
+                                {formData.storeName === store && <Check className="h-3 w-3 text-green-600" />}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="grid gap-2">
@@ -214,6 +206,18 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, initialData, existing
             </div>
           </div>
           
+          {/* Row 4: Remarks */}
+          <div className="grid gap-2">
+            <Label>Remarks / Notes</Label>
+            <Textarea 
+                placeholder="e.g. Paid via friend, Pending approval..."
+                value={formData.remarks || ""} 
+                onChange={(e) => setFormData({...formData, remarks: e.target.value})}
+                className="resize-none"
+                rows={2}
+            />
+          </div>
+
           <div className="flex justify-end">
               <span className="text-xs text-muted-foreground">Entry by: <span className="font-medium text-gray-900">{formData.createdBy}</span></span>
           </div>
