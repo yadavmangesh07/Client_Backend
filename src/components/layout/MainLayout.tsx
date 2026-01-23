@@ -8,7 +8,7 @@ import {
   Settings, 
   User, 
   Building2, 
-  FolderOpen, 
+  //FolderOpen, 
   Truck, 
   FileCheck,
   Calculator,
@@ -75,7 +75,7 @@ export function MainLayout() {
       items: [
         { href: "/challans", label: "Delivery Challans", icon: Truck },
         { href: "/wcc", label: "Work Certificates", icon: FileCheck },
-        { href: "/files", label: "Files & Folders", icon: FolderOpen },
+        //{ href: "/files", label: "Files & Folders", icon: FolderOpen },
       ]
     },
     {
