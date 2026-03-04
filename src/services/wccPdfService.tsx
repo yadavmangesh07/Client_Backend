@@ -185,6 +185,6 @@ export const generateWCCPdf = (data: WCCData) => {
     doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
   }
 
-  const safeRef = data.refNo ? data.refNo.replace(/[^a-zA-Z0-9]/g, "_") : "WCC";
+  // const safeRef = data.refNo ? data.refNo.replace(/[^a-zA-Z0-9]/g, "_") : "WCC";
   return doc.output("blob");
 };
