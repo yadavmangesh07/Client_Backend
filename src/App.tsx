@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"; // 👈 Import Outlet
 import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { useIdleTimeout } from "./hooks/useIdleTimeout"; // 👈 Import your new hook
 
 // Pages
 import DashboardPage from "./pages/dashboard/DashboardPage";
@@ -25,8 +26,12 @@ import EstimateListPage from "./pages/estimates/EstimateListPage";
 import EstimateFormPage from "./pages/estimates/EstimateFormPage"; 
 import InvoiceFormPage from "./pages/invoices/InvoiceFormPage";
 import PurchasesPage from "./pages/purchases/PurchasePage";
-// 👇 IMPORT NEW INVOICE FORM PAGE
- 
+
+// 👇 NEW: Wrapper component to initialize the timer inside the Router
+const IdleTimerLayout = () => {
+  useIdleTimeout(); // 1 Hour default
+  return <Outlet />; // Renders the nested routes below it
+};
 
 function App() {
   return (
@@ -35,40 +40,45 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
+        {/* Auth Guard */}
         <Route element={<ProtectedRoute />}>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* 👇 NEW: Idle Timer Guard (Only runs when logged in) */}
+          <Route element={<IdleTimerLayout />}>
+            
+            {/* UI Layout Wrapper */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/clients" element={<ClientPage />} />
-            <Route path="/clients/:id/profile" element={<ClientProfilePage />} />
-            
-            {/* 👇 UPDATED INVOICE ROUTES */}
-            <Route path="/invoices" element={<InvoicePage />} />
-            <Route path="/invoices/new" element={<InvoiceFormPage />} />
-            <Route path="/invoices/:id/edit" element={<InvoiceFormPage />} />
-            
-            <Route path="/challans" element={<ChallanListPage />} />
-            <Route path="/challans/new" element={<ChallanFormPage />} />
-            <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
-            
-            {/* ESTIMATES */}
-            <Route path="/estimates" element={<EstimateListPage />} /> 
-            <Route path="/estimates/new" element={<EstimateFormPage />} />
-            <Route path="/estimates/:id/edit" element={<EstimateFormPage />} />
-            
-            <Route path="/wcc" element={<WCCListPage />} />
-            <Route path="/wcc/new" element={<WCCFormPage />} />
-            <Route path="/wcc/:id/edit" element={<WCCFormPage />} />
-            
-            <Route path="/files" element={<FilesPage />} />
-            <Route path="/files/:clientId" element={<ClientProjectsPage />} />
-            
-            <Route path="/profile" element={<CompanyProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/account" element={<MyAccountPage />} />
-            <Route path="/purchases" element={<PurchasesPage />} />
-            
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/clients" element={<ClientPage />} />
+              <Route path="/clients/:id/profile" element={<ClientProfilePage />} />
+              
+              <Route path="/invoices" element={<InvoicePage />} />
+              <Route path="/invoices/new" element={<InvoiceFormPage />} />
+              <Route path="/invoices/:id/edit" element={<InvoiceFormPage />} />
+              
+              <Route path="/challans" element={<ChallanListPage />} />
+              <Route path="/challans/new" element={<ChallanFormPage />} />
+              <Route path="/challans/:id/edit" element={<ChallanFormPage />} />
+              
+              <Route path="/estimates" element={<EstimateListPage />} /> 
+              <Route path="/estimates/new" element={<EstimateFormPage />} />
+              <Route path="/estimates/:id/edit" element={<EstimateFormPage />} />
+              
+              <Route path="/wcc" element={<WCCListPage />} />
+              <Route path="/wcc/new" element={<WCCFormPage />} />
+              <Route path="/wcc/:id/edit" element={<WCCFormPage />} />
+              
+              <Route path="/files" element={<FilesPage />} />
+              <Route path="/files/:clientId" element={<ClientProjectsPage />} />
+              
+              <Route path="/profile" element={<CompanyProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/account" element={<MyAccountPage />} />
+              <Route path="/purchases" element={<PurchasesPage />} />
+              
+            </Route>
           </Route>
         </Route>
 

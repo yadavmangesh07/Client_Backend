@@ -10,7 +10,6 @@ import {
   Building2, 
   FileText, 
   Copy,
-  FolderOpen,
   History
 } from "lucide-react";
 import { format } from "date-fns";
@@ -109,9 +108,9 @@ export default function ClientProfilePage() {
           </div>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline" onClick={() => navigate(`/files/${client.id}`)}>
+           {/* <Button variant="outline" onClick={() => navigate(`/files/${client.id}`)}>
              <FolderOpen className="mr-2 h-4 w-4" /> Documents
-           </Button>
+           </Button> */}
 
            <Button variant="outline" onClick={() => setIsEditOpen(true)}>
              <Edit className="mr-2 h-4 w-4" /> Edit Profile
