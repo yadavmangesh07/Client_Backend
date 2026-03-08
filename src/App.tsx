@@ -1,7 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"; // 👈 Import Outlet
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useIdleTimeout } from "./hooks/useIdleTimeout"; // 👈 Import your new hook
+import { useIdleTimeout } from "./hooks/useIdleTimeout";
 
 // Pages
 import DashboardPage from "./pages/dashboard/DashboardPage";
@@ -27,10 +27,13 @@ import EstimateFormPage from "./pages/estimates/EstimateFormPage";
 import InvoiceFormPage from "./pages/invoices/InvoiceFormPage";
 import PurchasesPage from "./pages/purchases/PurchasePage";
 
-// 👇 NEW: Wrapper component to initialize the timer inside the Router
+/**
+ * IdleTimerLayout handles the session timeout logic.
+ * It's placed inside the ProtectedRoute so it only runs for authenticated users.
+ */
 const IdleTimerLayout = () => {
-  useIdleTimeout(); // 1 Hour default
-  return <Outlet />; // Renders the nested routes below it
+  useIdleTimeout(); 
+  return <Outlet />; 
 };
 
 function App() {
@@ -38,15 +41,16 @@ function App() {
     <BrowserRouter>
       <Toaster />
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Auth Guard */}
+        {/* 1. Auth Guard: Checks if user is logged in */}
         <Route element={<ProtectedRoute />}>
           
-          {/* 👇 NEW: Idle Timer Guard (Only runs when logged in) */}
+          {/* 2. Idle Guard: Monitors activity for auto-logout */}
           <Route element={<IdleTimerLayout />}>
             
-            {/* UI Layout Wrapper */}
+            {/* 3. Main Layout: Handles Sidebar, Header, and Page Animations */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -82,6 +86,7 @@ function App() {
           </Route>
         </Route>
 
+        {/* Catch-all Redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
